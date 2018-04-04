@@ -44,7 +44,8 @@ impl Color {
 
 impl Console {
     pub fn get() -> &'static mut Console {
-        memory::reference(0x80491A60)
+        // ArenaLow + 0x915C0
+        memory::reference(0x804E1A60)
     }
 
     pub fn setup(&mut self) {
