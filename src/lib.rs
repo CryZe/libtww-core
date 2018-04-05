@@ -1,4 +1,4 @@
-#![feature(lang_items, compiler_builtins_lib)]
+#![feature(lang_items, compiler_builtins_lib, const_fn)]
 #![no_std]
 
 extern crate arrayvec;
@@ -6,8 +6,8 @@ extern crate compiler_builtins;
 
 pub mod game;
 pub mod link;
-pub mod warping;
 pub mod system;
+pub mod warping;
 
 pub type Addr = system::libc::size_t;
 pub use link::Link;
