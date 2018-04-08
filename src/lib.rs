@@ -1,5 +1,19 @@
 #![feature(lang_items, compiler_builtins_lib, const_fn)]
 #![no_std]
+#![cfg_attr(feature = "alloc",
+            feature(alloc, global_allocator, alloc_system, allocator_api, allocator_internals,
+                    macro_reexport))]
+#![cfg_attr(feature = "alloc", default_lib_allocator)]
+
+#[cfg(feature = "alloc")]
+#[macro_reexport(vec, format)]
+pub extern crate alloc;
+#[cfg(feature = "alloc")]
+extern crate alloc_system;
+
+#[cfg(feature = "alloc")]
+#[global_allocator]
+static A: alloc_system::System = alloc_system::System;
 
 extern crate arrayvec;
 extern crate compiler_builtins;
@@ -49,4 +63,9 @@ impl fmt::Display for Coord {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         unsafe { write!(f, "{:.2}, {:.2}, {:.2}", self.x, self.y, self.z) }
     }
+}
+
+pub mod prelude {
+    #[cfg(feature = "alloc")]
+    pub use alloc::{boxed::Box, vec::Vec};
 }

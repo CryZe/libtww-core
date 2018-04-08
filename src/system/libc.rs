@@ -86,16 +86,15 @@ pub extern "C" fn realloc(ptr: *mut c_void, size: size_t) -> *mut c_void {
             }
         }
 
-        free(ptr); // TODO Test
+        free(ptr);
     }
 
     new_data
 }
 
 #[no_mangle]
-#[allow(non_snake_case)]
-pub extern "C" fn _Unwind_Resume() {
-    // FIXME
+pub extern "C" fn write(_file: i32, _buffer: *const c_void, _count: size_t) -> i32 {
+    unimplemented!()
 }
 
 #[no_mangle]

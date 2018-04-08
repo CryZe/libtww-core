@@ -5,3 +5,6 @@ authors = ["Christopher Serr <christopher.serr@gmail.com>"]
 
 [dependencies]
 arrayvec = { version = "0.4.7", default-features = false }
+
+[features]
+alloc = []
