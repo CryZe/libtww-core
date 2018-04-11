@@ -1,5 +1,5 @@
-use Addr;
 use system::memory::{read, reference, write};
+use Addr;
 
 pub const OFFSET: Addr = 0x803B8144;
 

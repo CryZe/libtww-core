@@ -4,6 +4,8 @@ use goblin::archive::Archive;
 use goblin::elf::{section_header, sym, Elf, Reloc};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
+pub static BASIC_LIB: &[u8] = include_bytes!("../resources/libbasic.a");
+
 fn symbols_referenced_in_section<F>(section_index: usize, elf: &Elf, mut f: F)
 where
     F: FnMut(usize),
@@ -78,21 +80,14 @@ pub struct LinkedSection<'a> {
     pub kind: SectionKind,
 }
 
-pub fn link<'a>(
-    buf: &'a [u8],
-    base_address: u32,
-    mut archive_symbols_to_visit: Vec<&'a str>,
-) -> Linked<'a> {
-    let archive = Archive::parse(buf).unwrap();
-
-    // println!("{:#?}", archive);
-
-    // TODO Handle "weak" and "merge" symbols
-    // TODO Handle bss
-
+fn traverse_archive<'a>(
+    archive_buf: &'a [u8],
+    archive: &Archive<'a>,
+    archive_symbols_to_visit: &mut Vec<&'a str>,
+    parsed_elfs: &mut BTreeMap<&'a str, Elf<'a>>,
+    visited_sections: &mut HashSet<SectionInfo<'a>>,
+) {
     let mut symbols_to_visit = Vec::new();
-    let mut visited_sections = HashSet::new();
-    let mut parsed_elfs = BTreeMap::new();
 
     while let Some(archive_symbol_name) = archive_symbols_to_visit.pop() {
         let member_name = archive
@@ -106,7 +101,7 @@ pub fn link<'a>(
         // );
 
         let member = archive.get(member_name).unwrap();
-        let elf_buf = &buf[member.offset as usize..][..member.header.size as usize];
+        let elf_buf = &archive_buf[member.offset as usize..][..member.header.size as usize];
         let elf = parsed_elfs
             .entry(member_name)
             .or_insert_with(|| Elf::parse(elf_buf).unwrap());
@@ -182,7 +177,20 @@ pub fn link<'a>(
             }
         }
     }
+}
 
+struct Layout<'a> {
+    sections: Vec<LocatedSection<'a>>,
+    lookup: HashMap<LookupKey<'a>, usize>,
+    data_section_address: Option<u32>,
+    symbol_table: BTreeMap<&'a str, u32>,
+}
+
+fn create_layout<'a>(
+    base_address: u32,
+    visited_sections: HashSet<SectionInfo<'a>>,
+    parsed_elfs: &BTreeMap<&'a str, Elf<'a>>,
+) -> Layout<'a> {
     // println!();
     // println!("Layouting...");
 
@@ -195,9 +203,9 @@ pub fn link<'a>(
 
     // println!("{:#?}", visited_sections);
 
-    let mut lookup_located_sections = HashMap::with_capacity(visited_sections.len());
+    let mut lookup = HashMap::with_capacity(visited_sections.len());
 
-    let located_sections = visited_sections
+    let sections = visited_sections
         .into_iter()
         .enumerate()
         .map(|(index, section_info)| {
@@ -227,7 +235,7 @@ pub fn link<'a>(
                 }
             }
 
-            lookup_located_sections.insert(
+            lookup.insert(
                 LookupKey {
                     member_name: section_info.member_name,
                     section_index: section_info.section_index,
@@ -245,8 +253,22 @@ pub fn link<'a>(
 
             val
         })
-        .collect::<Vec<_>>();
+        .collect();
 
+    Layout {
+        sections,
+        lookup,
+        data_section_address,
+        symbol_table,
+    }
+}
+
+fn relocate_and_collect<'a>(
+    layout: &Layout<'a>,
+    archive: &Archive<'a>,
+    archive_buf: &'a [u8],
+    parsed_elfs: &BTreeMap<&'a str, Elf<'a>>,
+) -> (Vec<u8>, Vec<u8>) {
     // println!("Relocating...");
     // println!();
 
@@ -263,10 +285,10 @@ pub fn link<'a>(
         address: located_section_address,
         padding: located_section_padding,
         ..
-    } in &located_sections
+    } in &layout.sections
     {
         let member = archive.get(member_name).unwrap();
-        let elf_buf = &buf[member.offset as usize..][..member.header.size as usize];
+        let elf_buf = &archive_buf[member.offset as usize..][..member.header.size as usize];
 
         let elf = &parsed_elfs[&member_name];
         let section = &elf.section_headers[section_index];
@@ -293,12 +315,13 @@ pub fn link<'a>(
                 let symbol = elf.syms.get(symbol_index).unwrap();
                 let symbol_section_index = symbol.st_shndx as usize;
                 // println!("Looking for {}, {}", member_name, symbol_section_index);
-                let section_address = lookup_located_sections
+                let section_address = layout
+                    .lookup
                     .get(&LookupKey {
                         member_name,
                         section_index: symbol_section_index,
                     })
-                    .map(|&index| located_sections[index].address)
+                    .map(|&index| layout.sections[index].address)
                     .unwrap_or_else(|| {
                         let name_index = symbol.st_name;
                         let archive_symbol_name = elf.strtab.get(name_index).unwrap().unwrap();
@@ -315,8 +338,8 @@ pub fn link<'a>(
                                     member_name,
                                     section_index,
                                 };
-                                let located_section_index = lookup_located_sections[key];
-                                return located_sections[located_section_index].address;
+                                let located_section_index = layout.lookup[key];
+                                return layout.sections[located_section_index].address;
                             }
                         }
                         unreachable!()
@@ -405,19 +428,45 @@ pub fn link<'a>(
         }
     }
 
+    (text_section, data_section)
+}
+
+pub fn link<'a>(
+    archive_buf: &'a [u8],
+    base_address: u32,
+    mut archive_symbols_to_visit: Vec<&'a str>,
+) -> Linked<'a> {
+    // TODO Handle "weak" and "merge" symbols
+
+    let archive = Archive::parse(archive_buf).unwrap();
+
+    // println!("{:#?}", archive);
+
+    let mut visited_sections = HashSet::new();
+    let mut parsed_elfs = BTreeMap::new();
+
+    traverse_archive(
+        archive_buf,
+        &archive,
+        &mut archive_symbols_to_visit,
+        &mut parsed_elfs,
+        &mut visited_sections,
+    );
+
+    let layout = create_layout(base_address, visited_sections, &parsed_elfs);
+
+    let (text_section, data_section) =
+        relocate_and_collect(&layout, &archive, archive_buf, &parsed_elfs);
+
     let dol = DolFile {
-        text_sections: vec![
-            Section {
-                address: base_address,
-                data: text_section.into_boxed_slice(),
-            },
-        ],
-        data_sections: vec![
-            Section {
-                address: data_section_address.unwrap_or(base_address),
-                data: data_section.into_boxed_slice(),
-            },
-        ],
+        text_sections: vec![Section {
+            address: base_address,
+            data: text_section.into_boxed_slice(),
+        }],
+        data_sections: vec![Section {
+            address: layout.data_section_address.unwrap_or(base_address),
+            data: data_section.into_boxed_slice(),
+        }],
         bss_address: 0,
         bss_size: 0,
         entry_point: 0,
@@ -427,8 +476,9 @@ pub fn link<'a>(
 
     Linked {
         dol,
-        symbol_table,
-        sections: located_sections
+        symbol_table: layout.symbol_table,
+        sections: layout
+            .sections
             .into_iter()
             .map(|s| {
                 let section_index = s.section_info.section_index;

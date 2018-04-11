@@ -1,7 +1,7 @@
-use Addr;
 use core::fmt;
 use core::mem::transmute;
 use core::ptr::null_mut;
+use Addr;
 
 #[allow(non_camel_case_types)]
 pub type c_int = i32;

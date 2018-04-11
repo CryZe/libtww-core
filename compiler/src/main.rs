@@ -22,12 +22,12 @@ use dol::DolFile;
 use rustc_demangle::demangle;
 use static_lib::SectionKind;
 use std::fs::File;
-use std::io::BufWriter;
 use std::io::prelude::*;
+use std::io::BufWriter;
 use std::process::Command;
 use structopt::StructOpt;
 
-const FRAMEWORK_MAP: &'static str = include_str!("../framework.map");
+const FRAMEWORK_MAP: &'static str = include_str!("../resources/framework.map");
 const HEADER: &'static str = r".text section layout
   Starting        Virtual
   address  Size   address
@@ -128,14 +128,17 @@ fn main() {
         config.link.entries.iter().map(|x| x as &str).collect(),
     );
 
+    println!("Creating map...");
+
     create_framework_map(&config, &linked.sections);
+
+    println!("Parsing patch...");
 
     let mut asm = String::new();
     File::open(&config.src.patch)
         .unwrap_or_else(|_| {
             panic!(
-                "Couldn't find \"{}\". If you don't need to patch the dol, just \
-                 create an empty file.",
+                "Couldn't find \"{}\". If you don't need to patch the dol, just create an empty file.",
                 config.src.patch.display()
             )
         })
@@ -147,6 +150,8 @@ fn main() {
     let mut assembler = Assembler::new(linked.symbol_table);
     let instructions = &assembler.assemble_all_lines(lines);
 
+    println!("Loading original game...");
+
     // if let Some("cheat") = args().skip(1).next().as_ref().map(|x| x as &str) {
     //     write_cheat(linked.dol, instructions);
     // } else {
@@ -154,6 +159,8 @@ fn main() {
     let _ = File::open(&config.src.dol)
         .unwrap_or_else(|_| panic!("Couldn't find \"{}\".", config.src.dol.display()))
         .read_to_end(&mut original);
+
+    println!("Patching game...");
 
     let original = DolFile::parse(&original);
     patch_game(original, linked.dol, &config, instructions);

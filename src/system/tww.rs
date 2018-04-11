@@ -1,6 +1,6 @@
-use Addr;
 use core::mem::transmute;
 use system::memory::{read, write};
+use Addr;
 
 pub fn random_u32() -> u32 {
     // TODO Wrong Signature, takes u32
