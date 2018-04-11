@@ -1,15 +1,15 @@
-use {Addr, Coord};
-use system::memory::{ptr, read, read_str, reference, write};
-use core::fmt::{self, Display};
 use self::quest_items::{QuestItems, Shield, Sword};
+use core::fmt::{self, Display};
+use system::memory::{ptr, read, read_str, reference, write};
+use {Addr, Coord};
 
 pub mod equips;
 pub mod inventory;
 pub mod item;
+pub mod pearl;
 pub mod quest_items;
 pub mod song;
 pub mod triforce;
-pub mod pearl;
 
 pub const OFFSET: Addr = 0x803B8108;
 pub const POSITION_OFFSET: Addr = 0x803d78fc;

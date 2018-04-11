@@ -1,6 +1,6 @@
 use system::memory::{reference, write, write_str};
-use warping::FadeOut;
 use warping::Entrance;
+use warping::FadeOut;
 
 pub const NO_LAYER_OVERRIDE: i8 = -1;
 
@@ -14,13 +14,14 @@ pub struct Warp {
 }
 
 impl Warp {
-    pub fn new(stage: &str,
-               entrance: u16,
-               room: u8,
-               layer_override: i8,
-               fadeout: FadeOut,
-               enabled: bool)
-               -> Self {
+    pub fn new(
+        stage: &str,
+        entrance: u16,
+        room: u8,
+        layer_override: i8,
+        fadeout: FadeOut,
+        enabled: bool,
+    ) -> Self {
         let mut warp = Warp {
             entrance: Entrance {
                 stage: [0; 8],

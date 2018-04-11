@@ -1,5 +1,5 @@
-use core::{mem, slice, str};
 use Addr;
+use core::{mem, slice, str};
 use system::libc;
 
 pub fn ptr<T>(addr: Addr) -> *mut T {

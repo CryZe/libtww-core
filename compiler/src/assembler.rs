@@ -1,12 +1,11 @@
+use std::collections::BTreeMap;
 use std::i64;
-use std::u32;
 use std::num::ParseIntError;
-use std::collections::HashMap;
-use std::process::Command;
 use std::str;
+use std::u32;
 
-pub struct Assembler {
-    symbol_table: HashMap<String, u32>,
+pub struct Assembler<'a> {
+    symbol_table: BTreeMap<&'a str, u32>,
     program_counter: u32,
 }
 
@@ -15,10 +14,13 @@ pub struct Instruction {
     pub data: u32,
 }
 
-impl Assembler {
-    pub fn new(elf_path: &str) -> Assembler {
+impl<'a> Assembler<'a> {
+    pub fn new(symbol_table: BTreeMap<&str, u32>) -> Assembler {
+        // for (key, val) in &symbol_table {
+        //     println!("{} -> {:x}", key, val);
+        // }
         Assembler {
-            symbol_table: build_symbol_table(elf_path),
+            symbol_table,
             program_counter: 0,
         }
     }
@@ -108,39 +110,6 @@ fn parse_u32_literal(literal: &str) -> Result<u32, ParseIntError> {
 fn parse_program_counter_label(line: &str) -> Result<u32, ParseIntError> {
     let line = &line[..line.len() - 1];
     parse_u32_literal(line)
-}
-
-fn build_symbol_table(elf_path: &str) -> HashMap<String, u32> {
-    let output = Command::new("powerpc-eabi-nm")
-        .arg(elf_path)
-        .output()
-        .expect("Failed to retrieve the symbol table");
-
-    let output =
-        str::from_utf8(&output.stdout).expect("The symbol table is not a proper UTF-8 string");
-
-    let mut symbol_table = HashMap::new();
-
-    for line in output.lines() {
-        let mut split = line.split_whitespace();
-        let address = split
-            .next()
-            .expect("The symbol table isn't properly formatted");
-
-        let address = if let Ok(address) = u32::from_str_radix(address, 16) {
-            address
-        } else {
-            continue;
-        };
-
-        let symbol = split
-            .nth(1)
-            .expect("The symbol table isn't properly formatted");
-
-        symbol_table.insert(symbol.to_owned(), address);
-    }
-
-    symbol_table
 }
 
 fn build_branch_instruction(address: u32, destination: u32, aa: bool, lk: bool) -> u32 {

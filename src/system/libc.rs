@@ -1,7 +1,7 @@
 use Addr;
+use core::fmt;
 use core::mem::transmute;
 use core::ptr::null_mut;
-use core::fmt;
 
 #[allow(non_camel_case_types)]
 pub type c_int = i32;
@@ -23,6 +23,7 @@ pub extern "C" fn eh_personality() {}
 pub extern "C" fn eh_unwind_resume() {}
 
 #[lang = "panic_fmt"]
+#[no_mangle]
 pub extern "C" fn panic_fmt(fmt: fmt::Arguments, file: &str, line: u32) -> ! {
     use arrayvec::{ArrayString, ArrayVec};
     use core::fmt::Write;

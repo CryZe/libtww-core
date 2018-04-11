@@ -1,4 +1,4 @@
-#![feature(lang_items, compiler_builtins_lib, const_fn)]
+#![feature(lang_items, const_fn)]
 #![no_std]
 #![cfg_attr(feature = "alloc",
             feature(alloc, global_allocator, alloc_system, allocator_api, allocator_internals,
@@ -16,7 +16,6 @@ extern crate alloc_system;
 static A: alloc_system::System = alloc_system::System;
 
 extern crate arrayvec;
-extern crate compiler_builtins;
 
 pub mod game;
 pub mod link;

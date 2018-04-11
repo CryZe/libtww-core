@@ -1,5 +1,5 @@
 use Addr;
-use system::memory::{reference, read, write};
+use system::memory::{read, reference, write};
 
 pub const OFFSET: Addr = 0x803B8144;
 
@@ -30,13 +30,13 @@ pub struct Inventory {
     pub has_delivery_bag: bool, // 6B
     _p1: [u8; 5],
     pub arrow_count: u8, // 71
-    pub bomb_count: u8, // 72
+    pub bomb_count: u8,  // 72
     _p2: [u8; 4],
     pub arrow_capacity: u8, // 77
-    pub bomb_capacity: u8, // 78
+    pub bomb_capacity: u8,  // 78
     _p3: [u8; 5],
-    pub spoils_bag: SpoilsBag, // 7E
-    pub bait_bag: BaitBag, // 86
+    pub spoils_bag: SpoilsBag,     // 7E
+    pub bait_bag: BaitBag,         // 86
     pub delivery_bag: DeliveryBag, // 8E
 }
 
