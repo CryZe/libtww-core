@@ -22,8 +22,8 @@ use dol::DolFile;
 use rustc_demangle::demangle;
 use static_lib::SectionKind;
 use std::fs::File;
-use std::io::prelude::*;
 use std::io::BufWriter;
+use std::io::prelude::*;
 use std::process::Command;
 use structopt::StructOpt;
 
@@ -112,20 +112,26 @@ fn main() {
 
     println!("Linking...");
 
-    let mut intermediate = Vec::new();
-    let _ = File::open(&config.src.link[0])
-        .unwrap_or_else(|_| {
-            panic!(
-                "Couldn't find \"{}\". Did you build the project correctly?",
-                config.src.link[0].display()
-            )
-        })
-        .read_to_end(&mut intermediate);
+    let mut libs_to_link = Vec::with_capacity(config.src.link.len() + 1);
+    for lib_path in &config.src.link {
+        let mut file_buf = Vec::new();
+        File::open(&config.src.link[0])
+            .unwrap_or_else(|_| {
+                panic!(
+                    "Couldn't find \"{}\". Did you build the project correctly?",
+                    lib_path.display()
+                )
+            })
+            .read_to_end(&mut file_buf)
+            .unwrap();
+        libs_to_link.push(file_buf);
+    }
+    libs_to_link.push(static_lib::BASIC_LIB.to_owned());
 
     let linked = static_lib::link(
-        &intermediate,
+        &libs_to_link,
         base_address.value() as u32,
-        config.link.entries.iter().map(|x| x as &str).collect(),
+        config.link.entries.clone(),
     );
 
     println!("Creating map...");
@@ -156,9 +162,10 @@ fn main() {
     //     write_cheat(linked.dol, instructions);
     // } else {
     let mut original = Vec::new();
-    let _ = File::open(&config.src.dol)
+    File::open(&config.src.dol)
         .unwrap_or_else(|_| panic!("Couldn't find \"{}\".", config.src.dol.display()))
-        .read_to_end(&mut original);
+        .read_to_end(&mut original)
+        .unwrap();
 
     println!("Patching game...");
 
