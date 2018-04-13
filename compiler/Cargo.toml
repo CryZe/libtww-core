@@ -5,10 +5,9 @@ authors = ["Christopher Serr <cryze92@gmail.com>"]
 
 [dependencies]
 rustc-demangle = "0.1.7"
-goblin = "0.0.14"
+goblin = { version = "0.0.14", default-features = false, features = ["std", "elf32", "elf64", "archive"] }
 byteorder = "1.2.2"
 toml = "0.4.6"
 serde_derive = "1.0.37"
 serde = "1.0.37"
-syn = { version = "0.13.1", default-features = false, features=["parsing"] }
-structopt = "0.2.6"
+syn = { version = "0.13.1", default-features = false, features = ["parsing"] }

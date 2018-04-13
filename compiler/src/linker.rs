@@ -166,12 +166,6 @@ fn traverse_archive<'a>(
             }
         };
 
-        // println!();
-        // println!(
-        //     "Visiting file {} to find symbol {}",
-        //     member_name, archive_symbol_name
-        // );
-
         let member = archive.get(member_name).unwrap();
         let elf_buf = &archive_buf[member.offset as usize..][..member.header.size as usize];
         let elf = parsed_elfs
@@ -193,25 +187,10 @@ fn traverse_archive<'a>(
             let name = elf.strtab.get(name_index).unwrap().unwrap();
 
             let section = &elf.section_headers[section_index];
-            // let section_name = elf.shdr_strtab
-            //     .get(section.sh_name as usize)
-            //     .unwrap()
-            //     .unwrap();
 
             if symbol.is_import() && section.sh_type == section_header::SHT_NULL {
                 archive_symbols_to_visit.push(name.to_string());
-            // println!(
-            //     "    |-> Visiting imported symbol {} (#{})",
-            //     name, symbol_index
-            // );
             } else {
-                // println!("    |");
-                // println!(
-                //     "    |-> Visiting symbol {} (#{}) in section {} (#{})",
-                //     name, symbol_index, section_name, section_index
-                // );
-                // let bind = symbol.st_bind();
-                // let is_global = bind == sym::STB_GLOBAL || bind == sym::STB_WEAK;
                 if visited_sections.insert(SectionInfo {
                     archive_index,
                     member_name,
@@ -223,27 +202,8 @@ fn traverse_archive<'a>(
                     } else {
                         SectionKind::DataSection
                     },
-                    // symbol: if is_global {
-                    //     Some((name, symbol.st_value as u32))
-                    // } else {
-                    //     None
-                    // },
                 }) {
                     symbols_referenced_in_section(section_index, &elf, |symbol_index| {
-                        // let symbol = elf.syms.get(symbol_index).unwrap();
-                        // let section_index = symbol.st_shndx as usize;
-
-                        // let section = &elf.section_headers[section_index];
-                        // let name_index = symbol.st_name;
-                        // let name = elf.strtab.get(name_index).unwrap().unwrap();
-                        // let section_name = elf.shdr_strtab
-                        //     .get(section.sh_name as usize)
-                        //     .unwrap()
-                        //     .unwrap();
-                        // println!(
-                        //     "        |-> References symbol {} (#{}) in section {} (#{})",
-                        //     name, symbol_index, section_name, section_index
-                        // );
                         symbols_to_visit.push(symbol_index);
                     });
                 }
@@ -264,17 +224,12 @@ fn create_layout<'a>(
     visited_sections: HashSet<SectionInfo<'a>>,
     parsed_elfs: &BTreeMap<(usize, &'a str), Elf<'a>>,
 ) -> Layout<'a> {
-    // println!();
-    // println!("Layouting...");
-
     let mut data_section_address = None;
     let mut address = base_address;
     let mut symbol_table = BTreeMap::new();
 
     let mut visited_sections = visited_sections.into_iter().collect::<Vec<_>>();
     visited_sections.sort_unstable();
-
-    // println!("{:#?}", visited_sections);
 
     let mut lookup = HashMap::with_capacity(visited_sections.len());
 
@@ -343,9 +298,6 @@ fn relocate_and_collect<'a>(
     archive_bufs: &'a [Vec<u8>],
     parsed_elfs: &BTreeMap<(usize, &'a str), Elf<'a>>,
 ) -> (Vec<u8>, Vec<u8>) {
-    // println!("Relocating...");
-    // println!();
-
     let (mut text_section, mut data_section) = (Vec::new(), Vec::new());
 
     for &LocatedSection {
@@ -377,21 +329,13 @@ fn relocate_and_collect<'a>(
         };
 
         if let Some(reloc_table) = reloc_table_for_section(section_index, &elf) {
-            // let section = &elf.section_headers[section_index];
-            // let section_name = elf.shdr_strtab
-            //     .get(section.sh_name as usize)
-            //     .unwrap()
-            //     .unwrap();
-            // println!("Relocating section {} (#{})", section_name, section_index);
             section_buf = section_slice.to_owned();
 
             for reloc in reloc_table {
-                // println!("    |-> {:?}", reloc);
                 let instruction = &mut section_buf[reloc.r_offset as usize..][..4];
                 let symbol_index = reloc.r_sym as usize;
                 let symbol = elf.syms.get(symbol_index).unwrap();
                 let symbol_section_index = symbol.st_shndx as usize;
-                // println!("Looking for {}, {}", member_name, symbol_section_index);
                 let section_address = layout
                     .lookup
                     .get(&LookupKey {
@@ -403,12 +347,10 @@ fn relocate_and_collect<'a>(
                     .unwrap_or_else(|| {
                         let name_index = symbol.st_name;
                         let archive_symbol_name = elf.strtab.get(name_index).unwrap().unwrap();
-                        // println!("Looking for {}", archive_symbol_name);
                         let (archive_index, member_name) = archive
                             .member_of_symbol(archive_symbol_name)
                             .map(|n| (archive_index, n))
                             .unwrap_or_else(|| {
-                                // println!("Looking for it globally");
                                 let (archive_index, archive) =
                                     resolve_symbol_to_archive(archive_symbol_name, archives)
                                         .unwrap();
@@ -436,7 +378,7 @@ fn relocate_and_collect<'a>(
                         unreachable!()
                     });
 
-                // Hopefully based on:
+                // Based on:
                 // https://github.com/llvm-mirror/lld/blob/0e7ca58c010ce93e66ce716923b0570c91248b7e/ELF/InputSection.cpp#L641
 
                 // S -> Sym.getVA(0)
@@ -495,12 +437,6 @@ fn relocate_and_collect<'a>(
             for _ in 0..located_section_padding {
                 text_section.push(0);
             }
-            // println!(
-            //     "At text section offset: {:x}, should be at address {:x}, padding: {:x}",
-            //     text_section.len(),
-            //     located_section_address,
-            //     located_section_padding,
-            // );
             text_section.extend(section_slice);
         } else {
             for _ in 0..located_section_padding {
@@ -565,8 +501,6 @@ pub fn link<'a>(
         entry_point: 0,
     };
 
-    // println!("{:#?}", dol);
-
     Linked {
         dol,
         symbol_table: layout.symbol_table,
@@ -584,7 +518,6 @@ pub fn link<'a>(
 
                 let sym_offset =
                     if let Some(sym) = function_symbols_for_section(section_index, elf).next() {
-                        // println!("Offset {} for {}", sym.st_value, section_name);
                         sym.st_value as u32
                     } else {
                         0

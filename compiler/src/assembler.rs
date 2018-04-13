@@ -16,9 +16,6 @@ pub struct Instruction {
 
 impl<'a> Assembler<'a> {
     pub fn new(symbol_table: BTreeMap<&str, u32>) -> Assembler {
-        // for (key, val) in &symbol_table {
-        //     println!("{} -> {:x}", key, val);
-        // }
         Assembler {
             symbol_table,
             program_counter: 0,

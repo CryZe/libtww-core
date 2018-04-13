@@ -118,7 +118,7 @@ impl DolFile {
         header.bss_size = self.bss_size;
         header.entry_point = self.entry_point;
 
-        let mut data = Vec::<u8>::new(); // FIXME
+        let mut data = Vec::<u8>::new();
         let mut i = 0;
         let mut offset = 256;
 

@@ -6,36 +6,33 @@ extern crate serde_derive;
 extern crate serde;
 extern crate syn;
 extern crate toml;
-#[macro_use]
-extern crate structopt;
 
 mod assembler;
-mod dol;
-// mod elf;
 mod config;
-mod static_lib;
+mod dol;
+mod iso;
+mod linker;
 
 use assembler::Assembler;
 use assembler::Instruction;
 use config::Config;
 use dol::DolFile;
+use linker::SectionKind;
 use rustc_demangle::demangle;
-use static_lib::SectionKind;
 use std::fs::File;
 use std::io::BufWriter;
 use std::io::prelude::*;
 use std::process::Command;
-use structopt::StructOpt;
 
-const FRAMEWORK_MAP: &'static str = include_str!("../resources/framework.map");
-const HEADER: &'static str = r".text section layout
+const FRAMEWORK_MAP: &str = include_str!("../resources/framework.map");
+const HEADER: &str = r".text section layout
   Starting        Virtual
   address  Size   address
   -----------------------";
 
-fn create_framework_map(config: &Config, sections: &[static_lib::LinkedSection]) {
+fn create_framework_map(config: &Config, sections: &[linker::LinkedSection]) {
     let mut file =
-        BufWriter::new(File::create(&config.out.map).expect("Couldn't create the framework map"));
+        BufWriter::new(File::create(&config.build.map).expect("Couldn't create the framework map"));
 
     writeln!(file, "{}", HEADER).unwrap();
 
@@ -74,8 +71,6 @@ fn create_framework_map(config: &Config, sections: &[static_lib::LinkedSection])
 }
 
 fn main() {
-    let opt = config::Opt::from_args();
-
     let mut toml_buf = String::new();
     File::open("RomHack.toml")
         .expect(
@@ -126,9 +121,9 @@ fn main() {
             .unwrap();
         libs_to_link.push(file_buf);
     }
-    libs_to_link.push(static_lib::BASIC_LIB.to_owned());
+    libs_to_link.push(linker::BASIC_LIB.to_owned());
 
-    let linked = static_lib::link(
+    let linked = linker::link(
         &libs_to_link,
         base_address.value() as u32,
         config.link.entries.clone(),
@@ -158,140 +153,32 @@ fn main() {
 
     println!("Loading original game...");
 
-    // if let Some("cheat") = args().skip(1).next().as_ref().map(|x| x as &str) {
-    //     write_cheat(linked.dol, instructions);
-    // } else {
-    let mut original = Vec::new();
-    File::open(&config.src.dol)
-        .unwrap_or_else(|_| panic!("Couldn't find \"{}\".", config.src.dol.display()))
-        .read_to_end(&mut original)
-        .unwrap();
+    let buf = iso::reader::load_iso_buf(&config.src.iso)
+        .unwrap_or_else(|_| panic!("Couldn't find \"{}\".", config.src.iso.display()));
 
-    println!("Patching game...");
+    let new_dol_data;
+    let mut iso = iso::reader::load_iso(&buf);
+    {
+        let main_dol = iso.main_dol_mut().unwrap();
+        let dol_data: Vec<u8> = main_dol.data.to_owned();
 
-    let original = DolFile::parse(&original);
-    patch_game(original, linked.dol, &config, instructions);
+        println!("Patching game...");
 
-    if opt.iso {
-        println!("Building ISO...");
-
-        let iso_path = config
-            .out
-            .iso
-            .expect("Expected iso path in `RomHack.toml` at key `out.iso`");
-        let pack_path = config.out.dol.parent().unwrap().parent().unwrap();
-
-        let exit_code = Command::new("gcit")
-            .arg(pack_path)
-            .arg("-q")
-            .arg("-flush")
-            .arg("-d")
-            .arg(&iso_path)
-            .spawn()
-            .expect("Couldn't build the ISO")
-            .wait()
-            .unwrap();
-
-        assert!(exit_code.success(), "Couldn't build the ISO");
+        let original = DolFile::parse(&dol_data);
+        new_dol_data = patch_game(original, linked.dol, instructions);
+        main_dol.data = &new_dol_data;
     }
-    // }
+
+    println!("Building ISO...");
+    let iso_path = &config.build.iso;
+    iso::writer::write_iso(BufWriter::new(File::create(iso_path).unwrap()), &iso).unwrap();
 }
 
-fn patch_game(
-    original: DolFile,
-    intermediate: DolFile,
-    config: &Config,
-    instructions: &[Instruction],
-) {
+fn patch_game(original: DolFile, intermediate: DolFile, instructions: &[Instruction]) -> Box<[u8]> {
     let mut original = original;
 
     original.append(intermediate);
     original.patch(instructions);
 
-    let data = original.to_bytes();
-    let mut file = File::create(&config.out.dol).unwrap_or_else(|_| {
-        panic!(
-            "Couldn't create \"{}\". You might need to provide higher \
-             privileges.",
-            config.out.dol.display()
-        )
-    });
-
-    file.write(&data).expect("Couldn't write the main.dol");
+    original.to_bytes()
 }
-
-// fn write_cheat(intermediate: DolFile, instructions: &[Instruction]) {
-//     let mut file = File::create("../../cheat.txt").expect(
-//         "Couldn't create \"cheat.txt\". You might need to provide higher \
-//          privileges.",
-//     );
-
-//     writeln!(file, "A8000000 00000001").unwrap();
-
-//     for instruction in instructions {
-//         writeln!(
-//             file,
-//             "{:08X} {:08X}",
-//             (instruction.address & 0x01FFFFFF) | 0x04000000,
-//             instruction.data
-//         ).unwrap();
-//     }
-
-//     for section in intermediate
-//         .text_sections
-//         .iter()
-//         .chain(intermediate.data_sections.iter())
-//     {
-//         writeln!(
-//             file,
-//             "{:08X} {:08X}",
-//             (section.address & 0x01FFFFFF) | 0x06000000,
-//             section.data.len()
-//         ).unwrap();
-//         let line_ender = if section.data.len() % 8 > 0 {
-//             8 - (section.data.len() % 8)
-//         } else {
-//             0
-//         };
-//         for (i, byte) in section
-//             .data
-//             .iter()
-//             .chain(std::iter::repeat(&0).take(line_ender))
-//             .enumerate()
-//         {
-//             if i % 8 == 4 {
-//                 write!(file, " ").unwrap();
-//             }
-
-//             write!(file, "{:02X}", byte).unwrap();
-
-//             if i % 8 == 7 {
-//                 writeln!(file, "").unwrap();
-//             }
-//         }
-//     }
-
-//     // for section in intermediate.text_sections.iter().chain(intermediate.data_sections.iter()) {
-//     //     let mut address = section.address;
-
-//     //     let line_ender = if section.data.len() % 4 > 0 {
-//     //         4 - (section.data.len() % 4)
-//     //     } else {
-//     //         0
-//     //     };
-
-//     //     for (i, byte) in section.data.iter().chain(std::iter::repeat(&0).take(line_ender)).enumerate() {
-//     //         if i % 4 == 0 {
-//     //             write!(file, "{:08X} ", (address & 0x01FFFFFF) | 0x04000000).unwrap();
-//     //         }
-
-//     //         write!(file, "{:02X}", byte).unwrap();
-
-//     //         if i % 4 == 3 {
-//     //             writeln!(file, "").unwrap();
-//     //         }
-
-//     //         address += 1;
-//     //     }
-//     // }
-// }
