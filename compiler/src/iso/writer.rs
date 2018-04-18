@@ -1,5 +1,5 @@
 use super::virtual_file_system::{Directory, Node};
-use super::{FstEntry, FstNodeType, consts::*};
+use super::{consts::*, FstEntry, FstNodeType};
 use byteorder::{WriteBytesExt, BE};
 use std::io::{Result, Seek, SeekFrom, Write};
 
@@ -30,6 +30,14 @@ where
         .unwrap();
     writer.write_all(&apploader.data)?;
 
+    let dol_offset_without_padding = header.data.len() + apploader.data.len();
+    let dol_offset =
+        (dol_offset_without_padding + (DOL_ALIGNMENT - 1)) / DOL_ALIGNMENT * DOL_ALIGNMENT;
+
+    for _ in dol_offset_without_padding..dol_offset {
+        writer.write_all(&[0])?;
+    }
+
     let dol = sys_dir
         .children
         .iter()
@@ -38,8 +46,13 @@ where
         .unwrap();
     writer.write_all(&dol.data)?;
 
-    let dol_offset = header.data.len() + apploader.data.len();
-    let fst_list_offset = dol_offset + dol.data.len();
+    let fst_list_offset_without_padding = dol_offset + dol.data.len();
+    let fst_list_offset =
+        (fst_list_offset_without_padding + (FST_ALIGNMENT - 1)) / FST_ALIGNMENT * FST_ALIGNMENT;
+
+    for _ in fst_list_offset_without_padding..fst_list_offset {
+        writer.write_all(&[0])?;
+    }
 
     let mut fst_len = 12;
     for (_, node) in root.children
