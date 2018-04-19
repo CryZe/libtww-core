@@ -66,6 +66,14 @@ impl<'a> Directory<'a> {
             .find(|f| f.name.ends_with(".dol"))?;
         Some(dol)
     }
+
+    pub fn banner_mut(&mut self) -> Option<&mut File<'a>> {
+        let banner = self.children
+            .iter_mut()
+            .filter_map(|c| c.as_file_mut())
+            .find(|f| f.name == "opening.bnr")?;
+        Some(banner)
+    }
 }
 
 pub struct File<'a> {

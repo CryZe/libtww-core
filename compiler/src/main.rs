@@ -3,11 +3,14 @@ extern crate goblin;
 extern crate rustc_demangle;
 #[macro_use]
 extern crate serde_derive;
+extern crate encoding_rs;
+extern crate image;
 extern crate serde;
 extern crate syn;
 extern crate toml;
 
 mod assembler;
+mod banner;
 mod config;
 mod dol;
 mod iso;
@@ -15,6 +18,7 @@ mod linker;
 
 use assembler::Assembler;
 use assembler::Instruction;
+use banner::Banner;
 use config::Config;
 use dol::DolFile;
 use linker::SectionKind;
@@ -43,11 +47,6 @@ fn create_framework_map(config: &Config, sections: &[linker::LinkedSection]) {
             && section.kind == SectionKind::TextSection
         {
             section_name_buf = demangle(&section_name[".text.".len()..]).to_string();
-            section_name_buf = section_name_buf
-                .replace(' ', "_")
-                .replace("()", "Void")
-                .replace("(", "Tuple<")
-                .replace(")", ">");
             let mut section_name: &str = &section_name_buf;
             if section_name.len() >= 19 && &section_name[section_name.len() - 19..][..3] == "::h" {
                 section_name = &section_name[..section_name.len() - 19];
@@ -80,7 +79,7 @@ fn main() {
         .read_to_string(&mut toml_buf)
         .expect("Failed to read \"RomHack.toml\".");
 
-    let config: Config = toml::from_str(&toml_buf).expect("Can't parse RomHack.toml");
+    let mut config: Config = toml::from_str(&toml_buf).expect("Can't parse RomHack.toml");
     let base_address: syn::LitInt =
         syn::parse_str(&config.link.base).expect("Invalid Base Address");
 
@@ -156,27 +155,66 @@ fn main() {
     let buf = iso::reader::load_iso_buf(&config.src.iso)
         .unwrap_or_else(|_| panic!("Couldn't find \"{}\".", config.src.iso.display()));
 
-    let new_dol_data;
+    let (new_dol_data, new_banner_data);
     let mut iso = iso::reader::load_iso(&buf);
     {
-        let main_dol = iso.main_dol_mut().unwrap();
-        let dol_data: Vec<u8> = main_dol.data.to_owned();
-
         println!("Patching game...");
+
+        let main_dol = iso.main_dol_mut().expect("Dol file not found");
+        let dol_data: Vec<u8> = main_dol.data.to_owned();
 
         let original = DolFile::parse(&dol_data);
         new_dol_data = patch_game(original, linked.dol, instructions);
         main_dol.data = &new_dol_data;
     }
+    {
+        println!("Patching banner...");
+
+        if let Some(banner_file) = iso.banner_mut() {
+            // TODO Not always true
+            let is_japanese = true;
+            let mut banner = Banner::parse(is_japanese, &banner_file.data);
+            if let Some(game_name) = config.info.game_name.take() {
+                banner.game_name = game_name;
+            }
+            if let Some(developer_name) = config.info.developer_name.take() {
+                banner.developer_name = developer_name;
+            }
+            if let Some(full_game_name) = config.info.full_game_name.take() {
+                banner.full_game_name = full_game_name;
+            }
+            if let Some(full_developer_name) = config.info.full_developer_name.take() {
+                banner.full_developer_name = full_developer_name;
+            }
+            if let Some(game_description) = config.info.description.take() {
+                banner.game_description = game_description;
+            }
+            if let Some(image_path) = config.info.image.take() {
+                let image = image::open(image_path)
+                    .expect("Couldn't open banner image")
+                    .to_rgba();
+                banner.image.copy_from_slice(&image);
+            }
+            new_banner_data = banner.to_bytes(is_japanese);
+            banner_file.data = &new_banner_data;
+        } else {
+            println!("No banner to patch.");
+        }
+    }
 
     println!("Building ISO...");
     let iso_path = &config.build.iso;
-    iso::writer::write_iso(BufWriter::new(File::create(iso_path).unwrap()), &iso).unwrap();
+    iso::writer::write_iso(
+        BufWriter::with_capacity(4 << 20, File::create(iso_path).unwrap()),
+        &iso,
+    ).unwrap();
 }
 
-fn patch_game(original: DolFile, intermediate: DolFile, instructions: &[Instruction]) -> Box<[u8]> {
-    let mut original = original;
-
+fn patch_game(
+    mut original: DolFile,
+    intermediate: DolFile,
+    instructions: &[Instruction],
+) -> Box<[u8]> {
     original.append(intermediate);
     original.patch(instructions);
 

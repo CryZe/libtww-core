@@ -1,4 +1,5 @@
 use assembler::Instruction;
+use byteorder::{ByteOrder, BE};
 use std::fmt;
 use std::fmt::Debug;
 
@@ -53,14 +54,11 @@ entry_point: {:x}",
 }
 
 fn read_u32(data: &[u8]) -> u32 {
-    (data[0] as u32) << 24 | (data[1] as u32) << 16 | (data[2] as u32) << 8 | (data[3] as u32)
+    BE::read_u32(data)
 }
 
 fn write_u32(data: &mut [u8], value: u32) {
-    data[0] = (value >> 24) as u8;
-    data[1] = (value >> 16) as u8;
-    data[2] = (value >> 8) as u8;
-    data[3] = value as u8;
+    BE::write_u32(data, value)
 }
 
 fn read_sections(

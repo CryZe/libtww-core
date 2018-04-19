@@ -1,5 +1,5 @@
 use super::virtual_file_system::{Directory, Node};
-use super::{consts::*, FstEntry, FstNodeType};
+use super::{FstEntry, FstNodeType, consts::*};
 use byteorder::{WriteBytesExt, BE};
 use std::io::{Result, Seek, SeekFrom, Write};
 

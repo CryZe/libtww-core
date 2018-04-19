@@ -1,8 +1,5 @@
 use std::collections::BTreeMap;
-use std::i64;
-use std::num::ParseIntError;
-use std::str;
-use std::u32;
+use syn::{self, synom::ParseError};
 
 pub struct Assembler<'a> {
     symbol_table: BTreeMap<&'a str, u32>,
@@ -86,25 +83,16 @@ fn reduce_line_to_code(line: &str) -> &str {
     line.trim()
 }
 
-fn parse_i64_literal(literal: &str) -> Result<i64, ParseIntError> {
-    let mut literal = literal;
-    if let Some(index) = literal.find("0x") {
-        let negative = literal.starts_with('-');
-        literal = &literal[index + 2..];
-
-        let factor = if negative { -1 } else { 1 };
-
-        i64::from_str_radix(literal, 16).map(|i| factor * i)
-    } else {
-        literal.parse()
-    }
+fn parse_i64_literal(literal: &str) -> Result<i64, ParseError> {
+    let val: syn::LitInt = syn::parse_str(literal)?;
+    Ok(val.value() as i64)
 }
 
-fn parse_u32_literal(literal: &str) -> Result<u32, ParseIntError> {
+fn parse_u32_literal(literal: &str) -> Result<u32, ParseError> {
     parse_i64_literal(literal).map(|i| i as u32)
 }
 
-fn parse_program_counter_label(line: &str) -> Result<u32, ParseIntError> {
+fn parse_program_counter_label(line: &str) -> Result<u32, ParseError> {
     let line = &line[..line.len() - 1];
     parse_u32_literal(line)
 }
