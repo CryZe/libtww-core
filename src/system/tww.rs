@@ -1,6 +1,8 @@
+#![allow(non_snake_case)]
+
+use Addr;
 use core::mem::transmute;
 use system::memory::{read, write};
-use Addr;
 
 extern "C" {
     #[link_name = "JAIZelBasic::getRandomU32(u32)"]
@@ -91,19 +93,16 @@ pub fn fopmsgm_message_set(message_id: u16) {
     fopmsgm_message_set(message_id)
 }
 
-#[allow(non_snake_case)]
 pub fn dStage_dt_c_stageLoader(a: Addr, b: Addr) {
     let stage_loader = unsafe { transmute::<Addr, extern "C" fn(Addr, Addr)>(0x80040f98) };
     stage_loader(a, b)
 }
 
-#[allow(non_snake_case)]
 pub fn dSv_player_get_item_c_onItem(dSv_player_get_item_c: Addr, slot_id: i32, unknown: u8) {
     let on_item = unsafe { transmute::<Addr, extern "C" fn(Addr, i32, u8)>(0x800572bc) };
     on_item(dSv_player_get_item_c, slot_id, unknown)
 }
 
-#[allow(non_snake_case)]
 pub fn dSv_player_return_place_c_set(
     dSv_player_return_place_c: Addr,
     stage: *const u8,

@@ -1,6 +1,6 @@
+use Addr;
 use core::{mem, slice, str};
 use system::libc;
-use Addr;
 
 pub fn ptr<T>(addr: Addr) -> *mut T {
     unsafe { mem::transmute(addr) }

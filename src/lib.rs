@@ -1,11 +1,9 @@
 #![feature(const_fn)]
 #![no_std]
-#![cfg_attr(
-    feature = "alloc",
-    feature(
-        alloc, global_allocator, alloc_system, allocator_api, allocator_internals, macro_reexport
-    )
-)]
+#![cfg_attr(feature = "alloc",
+            feature(alloc, global_allocator, alloc_system, allocator_api, allocator_internals,
+                    macro_reexport))]
+#![cfg_attr(feature = "math", feature(core_float))]
 #![cfg_attr(feature = "alloc", default_lib_allocator)]
 
 #[cfg(feature = "alloc")]
