@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use core::mem::transmute;
 use system::memory::{read, write};
 use Addr;
@@ -91,19 +93,16 @@ pub fn fopmsgm_message_set(message_id: u16) {
     fopmsgm_message_set(message_id)
 }
 
-#[allow(non_snake_case)]
 pub fn dStage_dt_c_stageLoader(a: Addr, b: Addr) {
     let stage_loader = unsafe { transmute::<Addr, extern "C" fn(Addr, Addr)>(0x80040f98) };
     stage_loader(a, b)
 }
 
-#[allow(non_snake_case)]
 pub fn dSv_player_get_item_c_onItem(dSv_player_get_item_c: Addr, slot_id: i32, unknown: u8) {
     let on_item = unsafe { transmute::<Addr, extern "C" fn(Addr, i32, u8)>(0x800572bc) };
     on_item(dSv_player_get_item_c, slot_id, unknown)
 }
 
-#[allow(non_snake_case)]
 pub fn dSv_player_return_place_c_set(
     dSv_player_return_place_c: Addr,
     stage: *const u8,
@@ -112,6 +111,29 @@ pub fn dSv_player_return_place_c_set(
 ) {
     let set = unsafe { transmute::<Addr, extern "C" fn(Addr, *const u8, i8, u8)>(0x800569c0) };
     set(dSv_player_return_place_c, stage, room, start_code)
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct Color {
+    pub rgba: u32,
+}
+
+pub type TColor = *mut Color;
+
+pub fn j2d_draw_line(x1: f32, y1: f32, x2: f32, y2: f32, color: TColor, line_width: i32) {
+    let call = unsafe { transmute::<Addr, extern "C" fn(f32, f32, f32, f32, TColor, i32)>(0x802cb470) };
+    call(x1, y1, x2, y2, color, line_width)
+}
+
+pub fn j2d_fill_box(x: f32, y: f32, w: f32, h: f32, color: TColor) {
+    let call = unsafe { transmute::<Addr, extern "C" fn(f32, f32, f32, f32, TColor)>(0x802cb59c) };
+    call(x, y, w, h, color)
+}
+
+pub fn j2d_draw_frame(x: f32, y: f32, w: f32, h: f32, color: TColor, line_width: u8) {
+    let call = unsafe { transmute::<Addr, extern "C" fn(f32, f32, f32, f32, TColor, u8)>(0x802cb674) };
+    call(x, y, w, h, color, line_width)
 }
 
 pub struct JKRDvdFile;
