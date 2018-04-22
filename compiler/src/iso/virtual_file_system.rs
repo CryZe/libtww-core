@@ -74,6 +74,19 @@ impl<'a> Directory<'a> {
             .find(|f| f.name == "opening.bnr")?;
         Some(banner)
     }
+
+    pub fn framework_map(&self) -> Option<&File<'a>> {
+        let maps_dir = self.children
+            .iter()
+            .filter_map(|c| c.as_directory())
+            .find(|d| d.name == "maps")?;
+        let file = maps_dir
+            .children
+            .iter()
+            .filter_map(|c| c.as_file())
+            .find(|f| f.name == "framework.map")?;
+        Some(file)
+    }
 }
 
 pub struct File<'a> {

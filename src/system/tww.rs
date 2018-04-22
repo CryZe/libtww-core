@@ -2,16 +2,21 @@ use core::mem::transmute;
 use system::memory::{read, write};
 use Addr;
 
-pub fn random_u32() -> u32 {
+extern "C" {
+    #[link_name = "JAIZelBasic::getRandomU32(u32)"]
     // TODO Wrong Signature, takes u32
-    let random_u32 = unsafe { transmute::<Addr, extern "C" fn() -> u32>(0x802a9500) };
-    random_u32()
+    fn game_random_u32() -> u32;
+    #[link_name = "cM_rndF(f32)"]
+    // TODO Wrong Signature, takes f32
+    fn game_random() -> f64;
+}
+
+pub fn random_u32() -> u32 {
+    unsafe { game_random_u32() }
 }
 
 pub fn random() -> f64 {
-    // TODO Wrong Signature, takes f32
-    let random = unsafe { transmute::<Addr, extern "C" fn() -> f64>(0x80243b40) };
-    random()
+    unsafe { game_random() }
 }
 
 pub fn cdyl_init_async() {

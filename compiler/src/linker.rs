@@ -124,25 +124,28 @@ fn traverse_global<'a>(
     archives: &mut [Option<Archive<'a>>],
     parsed_elfs: &mut BTreeMap<(usize, &'a str), Elf<'a>>,
     visited_sections: &mut HashSet<SectionInfo<'a>>,
+    prelinked_symbols: &HashMap<String, u32>,
 ) {
     let mut archive_symbols_to_visit = Vec::new();
 
     while let Some(symbol) = global_symbols_to_visit.pop() {
-        let (archive_index, archive) =
+        if let Some((archive_index, archive)) =
             resolve_symbol_to_archive_mut(&symbol, archive_bufs, archives)
-                .unwrap_or_else(|| panic!("Unresolved symbol {}", symbol));
+        {
+            archive_symbols_to_visit.push(symbol);
 
-        archive_symbols_to_visit.push(symbol);
-
-        traverse_archive(
-            &archive_bufs[archive_index],
-            archive,
-            archive_index,
-            global_symbols_to_visit,
-            &mut archive_symbols_to_visit,
-            parsed_elfs,
-            visited_sections,
-        );
+            traverse_archive(
+                &archive_bufs[archive_index],
+                archive,
+                archive_index,
+                global_symbols_to_visit,
+                &mut archive_symbols_to_visit,
+                parsed_elfs,
+                visited_sections,
+            );
+        } else if !prelinked_symbols.contains_key(&symbol) {
+            panic!("Unresolved symbol {}", symbol)
+        }
     }
 }
 
@@ -297,6 +300,7 @@ fn relocate_and_collect<'a>(
     archives: &'a [Option<Archive<'a>>],
     archive_bufs: &'a [Vec<u8>],
     parsed_elfs: &BTreeMap<(usize, &'a str), Elf<'a>>,
+    prelinked_symbols: &HashMap<String, u32>,
 ) -> (Vec<u8>, Vec<u8>) {
     let (mut text_section, mut data_section) = (Vec::new(), Vec::new());
 
@@ -347,35 +351,42 @@ fn relocate_and_collect<'a>(
                     .unwrap_or_else(|| {
                         let name_index = symbol.st_name;
                         let archive_symbol_name = elf.strtab.get(name_index).unwrap().unwrap();
-                        let (archive_index, member_name) = archive
+                        if let Some((archive_index, member_name)) = archive
                             .member_of_symbol(archive_symbol_name)
                             .map(|n| (archive_index, n))
-                            .unwrap_or_else(|| {
+                            .or_else(|| {
                                 let (archive_index, archive) =
-                                    resolve_symbol_to_archive(archive_symbol_name, archives)
-                                        .unwrap();
+                                    resolve_symbol_to_archive(archive_symbol_name, archives)?;
                                 let (member_name, _) =
-                                    resolve_archive_symbol_to_member(archive_symbol_name, archive)
-                                        .unwrap();
-                                (archive_index, member_name)
-                            });
-                        let elf = &parsed_elfs[&(archive_index, member_name)];
+                                    resolve_archive_symbol_to_member(archive_symbol_name, archive)?;
+                                Some((archive_index, member_name))
+                            }) {
+                            let elf = &parsed_elfs[&(archive_index, member_name)];
 
-                        for (symbol_index, symbol) in elf.syms.iter().enumerate() {
-                            let name_index = symbol.st_name;
-                            let name = elf.strtab.get(name_index).unwrap().unwrap();
-                            if name == archive_symbol_name {
-                                let symbol = elf.syms.get(symbol_index).unwrap();
-                                let section_index = symbol.st_shndx as usize;
-                                let located_section_index = layout.lookup[&LookupKey {
-                                                                              archive_index,
-                                                                              member_name,
-                                                                              section_index,
-                                                                          }];
-                                return layout.sections[located_section_index].address;
+                            for (symbol_index, symbol) in elf.syms.iter().enumerate() {
+                                let name_index = symbol.st_name;
+                                let name = elf.strtab.get(name_index).unwrap().unwrap();
+                                if name == archive_symbol_name {
+                                    let symbol = elf.syms.get(symbol_index).unwrap();
+                                    let section_index = symbol.st_shndx as usize;
+                                    let located_section_index = layout.lookup[&LookupKey {
+                                                                                  archive_index,
+                                                                                  member_name,
+                                                                                  section_index,
+                                                                              }];
+                                    return layout.sections[located_section_index].address;
+                                }
                             }
+                            unreachable!()
+                        } else {
+                            println!(
+                                "Using prelinked symbol {}, at addr: {:08x}",
+                                archive_symbol_name,
+                                (located_section_address as u32)
+                                    .wrapping_add(reloc.r_offset as u32)
+                            );
+                            return prelinked_symbols[archive_symbol_name];
                         }
-                        unreachable!()
                     });
 
                 // Based on:
@@ -459,6 +470,7 @@ pub fn link<'a>(
     archive_bufs: &'a [Vec<u8>],
     base_address: u32,
     mut global_symbols_to_visit: Vec<String>,
+    prelinked_symbols: &HashMap<String, u32>,
 ) -> Linked<'a> {
     // TODO Handle "weak" and "merge" symbols
 
@@ -476,12 +488,18 @@ pub fn link<'a>(
         &mut archives,
         &mut parsed_elfs,
         &mut visited_sections,
+        prelinked_symbols,
     );
 
     let layout = create_layout(base_address, visited_sections, &parsed_elfs);
 
-    let (text_section, data_section) =
-        relocate_and_collect(&layout, &archives, &archive_bufs, &parsed_elfs);
+    let (text_section, data_section) = relocate_and_collect(
+        &layout,
+        &archives,
+        &archive_bufs,
+        &parsed_elfs,
+        prelinked_symbols,
+    );
 
     let dol = DolFile {
         text_sections: vec![

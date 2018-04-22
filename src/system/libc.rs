@@ -1,12 +1,10 @@
 use core::fmt;
-use core::mem::transmute;
 use core::ptr::null_mut;
-use Addr;
 
 #[allow(non_camel_case_types)]
 pub type c_int = i32;
 #[allow(non_camel_case_types)]
-pub type c_void = ();
+pub type c_void = u8;
 #[allow(non_camel_case_types)]
 pub type size_t = usize;
 
@@ -44,11 +42,18 @@ pub extern "C" fn panic_fmt(fmt: fmt::Arguments, file: &str, line: u32) -> ! {
     loop {}
 }
 
+extern "C" {
+    #[link_name = "cMl::memalignB(i32, u32)"]
+    fn game_memalign(align: size_t, size: size_t) -> *mut c_void;
+    #[link_name = "cMl::free(void*)"]
+    fn game_free(ptr: *mut c_void);
+    #[link_name = "strlen"]
+    fn game_strlen(string: *const u8) -> size_t;
+}
+
 #[no_mangle]
 pub extern "C" fn malloc(size: size_t) -> *mut c_void {
-    let memalign =
-        unsafe { transmute::<Addr, extern "C" fn(size_t, size_t) -> *mut c_void>(0x8023ea88) };
-    memalign(0xFFFFFFFC, size)
+    unsafe { game_memalign(0xFFFFFFFC, size) }
 }
 
 #[no_mangle]
@@ -57,18 +62,15 @@ pub extern "C" fn posix_memalign(
     alignment: size_t,
     size: size_t,
 ) -> c_int {
-    let memalign =
-        unsafe { transmute::<Addr, extern "C" fn(size_t, size_t) -> *mut c_void>(0x8023ea88) };
     unsafe {
-        *memptr = memalign(alignment, size);
+        *memptr = game_memalign(alignment, size);
     }
     0
 }
 
 #[no_mangle]
 pub extern "C" fn free(ptr: *mut c_void) {
-    let free = unsafe { transmute::<Addr, extern "C" fn(*mut c_void)>(0x8023eac0) };
-    free(ptr);
+    unsafe { game_free(ptr) }
 }
 
 #[no_mangle]
@@ -98,71 +100,6 @@ pub extern "C" fn write(_file: i32, _buffer: *const c_void, _count: size_t) -> i
     unimplemented!()
 }
 
-#[no_mangle]
-pub extern "C" fn strlen(string: *const u8) -> size_t {
-    let mut counter = 0;
-    let mut string = string;
-    while unsafe { *string } != 0 {
-        string = unsafe { string.offset(1) };
-        counter += 1;
-    }
-    counter
+pub fn strlen(string: *const u8) -> size_t {
+    unsafe { game_strlen(string) }
 }
-
-// #[cfg_attr(all(feature = "weak", not(windows), not(target_os = "macos")), linkage = "weak")]
-// #[no_mangle]
-// pub unsafe extern "C" fn memcpy(dest: *mut u8, src: *const u8, n: usize) -> *mut u8 {
-//     let mut i = 0;
-//     while i < n {
-//         *dest.offset(i as isize) = *src.offset(i as isize);
-//         i += 1;
-//     }
-//     dest
-// }
-
-// #[cfg_attr(all(feature = "weak", not(windows), not(target_os = "macos")), linkage = "weak")]
-// #[no_mangle]
-// pub unsafe extern "C" fn memmove(dest: *mut u8, src: *const u8, n: usize) -> *mut u8 {
-//     if src < dest as *const u8 {
-//         // copy from end
-//         let mut i = n;
-//         while i != 0 {
-//             i -= 1;
-//             *dest.offset(i as isize) = *src.offset(i as isize);
-//         }
-//     } else {
-//         // copy from beginning
-//         let mut i = 0;
-//         while i < n {
-//             *dest.offset(i as isize) = *src.offset(i as isize);
-//             i += 1;
-//         }
-//     }
-//     dest
-// }
-
-// #[cfg_attr(all(feature = "weak", not(windows), not(target_os = "macos")), linkage = "weak")]
-// #[no_mangle]
-// pub unsafe extern "C" fn memset(s: *mut u8, c: i32, n: usize) -> *mut u8 {
-//     let mut i = 0;
-//     while i < n {
-//         *s.offset(i as isize) = c as u8;
-//         i += 1;
-//     }
-//     s
-// }
-
-// #[cfg_attr(all(feature = "weak", not(windows), not(target_os = "macos")), linkage = "weak")]
-// #[no_mangle]
-// pub unsafe extern "C" fn memcmp(s1: *const u8, s2: *const u8, n: usize) -> i32 {
-//     let mut i = 0;
-//     while i < n {
-//         let a = *s1.offset(i as isize);
-//         let b = *s2.offset(i as isize);
-//         if a != b {
-//             return a as i32 - b as i32;
-//         }
-//         i += 1;
-//     }
-//     0
-// }
