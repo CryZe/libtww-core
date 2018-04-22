@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 //! Based on https://github.com/devkitPro/libogc/blob/90b38ee52cb14db11ee961b0e167fda9ed87d090/gc/ogc/gx.h
 
 use core::mem::transmute;
@@ -135,6 +137,42 @@ pub const PNMTX7: u32 = 21;
 pub const PNMTX8: u32 = 24;
 pub const PNMTX9: u32 = 27;
 
+// Compare type
+pub const NEVER: u8 = 0;
+pub const LESS: u8 = 1;
+pub const EQUAL: u8 = 2;
+pub const LEQUAL: u8 = 3;
+pub const GREATER: u8 = 4;
+pub const NEQUAL: u8 = 5;
+pub const GEQUAL: u8 = 6;
+pub const ALWAYS: u8 = 7;
+
+// Alpha combine control
+pub const AOP_AND: u8 = 0;
+pub const AOP_OR: u8 = 1;
+pub const AOP_XOR: u8 = 2;
+pub const AOP_XNOR: u8 = 3;
+pub const MAX_ALPHAOP: u8 = 4;
+
+// TEV stage
+pub const TEVSTAGE0: u8 = 0;
+pub const TEVSTAGE1: u8 = 1;
+pub const TEVSTAGE2: u8 = 2;
+pub const TEVSTAGE3: u8 = 3;
+pub const TEVSTAGE4: u8 = 4;
+pub const TEVSTAGE5: u8 = 5;
+pub const TEVSTAGE6: u8 = 6;
+pub const TEVSTAGE7: u8 = 7;
+pub const TEVSTAGE8: u8 = 8;
+pub const TEVSTAGE9: u8 = 9;
+pub const TEVSTAGE10: u8 = 10;
+pub const TEVSTAGE11: u8 = 11;
+pub const TEVSTAGE12: u8 = 12;
+pub const TEVSTAGE13: u8 = 13;
+pub const TEVSTAGE14: u8 = 14;
+pub const TEVSTAGE15: u8 = 15;
+pub const MAX_TEVSTAGE: u8 = 16;
+
 pub fn set_blend_mode(mode: u8, src_fact: u8, dst_fact: u8, op: u8) {
     let GXSetBlendMode = unsafe { transmute::<Addr, extern "C" fn(u8, u8, u8, u8)>(0x8032425c) };
     GXSetBlendMode(mode, src_fact, dst_fact, op)
@@ -155,6 +193,21 @@ pub fn set_vtx_attr_fmt(vtxfmt: u8, vtxattr: u32, comptype: u32, compsize: u32, 
 pub fn load_pos_mtx_imm(mtx: *mut Mtx, pnidx: u32) {
     let GXLoadPosMtxImm = unsafe { transmute::<Addr, extern "C" fn(*mut Mtx, u32)>(0x8032493c) };
     GXLoadPosMtxImm(mtx, pnidx)
+}
+
+pub fn set_num_ind_stages(nstages: u8) {
+    let GXSetNumIndStages = unsafe { transmute::<Addr, extern "C" fn(u8)>(0x80323604) };
+    GXSetNumIndStages(nstages)
+}
+
+pub fn set_tev_direct(tevstage: u8) {
+    let GXSetTevDirect = unsafe { transmute::<Addr, extern "C" fn(u8)>(0x8032362c) };
+    GXSetTevDirect(tevstage)
+}
+
+pub fn set_alpha_compare(comp0: u8, ref0: u8, aop: u8, comp1: u8, ref1: u8) {
+    let GXSetAlphaCompare = unsafe { transmute::<Addr, extern "C" fn(u8, u8, u8, u8, u8)>(0x80323ccc) };
+    GXSetAlphaCompare(comp0, ref0, aop, comp1, ref1)
 }
 
 pub fn submit_f32(val: f32) {
