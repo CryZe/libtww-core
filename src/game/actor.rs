@@ -768,7 +768,7 @@ pub struct ActorMemory {
 
 impl ActorMemory {
     fn new() -> &'static mut ActorMemory {
-        system::fopacm_create_append()
+        unsafe { system::fopacm_create_append() }
     }
 
     fn write_actor(&mut self, actor: &ActorTemplate) {
@@ -821,7 +821,9 @@ impl ActorTemplate {
 
         layer::switch_to_safe_layer();
 
-        system::dstage_actor_create(self, memory);
+        unsafe {
+            system::dstage_actor_create(self, memory);
+        }
 
         memory
     }

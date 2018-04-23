@@ -1,15 +1,15 @@
 use {system, Addr};
 
 pub fn get_layer_by_id(id: u32) -> Addr {
-    system::get_layer_by_id(id)
+    unsafe { system::get_layer_by_id(id) }
 }
 
 pub fn set(addr: Addr) {
-    system::set_current_layer(addr)
+    unsafe { system::set_current_layer(addr) }
 }
 
 pub fn get() -> Addr {
-    system::get_current_layer()
+    unsafe { system::get_current_layer() }
 }
 
 pub fn root_layer() -> Addr {
