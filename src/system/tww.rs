@@ -113,29 +113,6 @@ pub fn dSv_player_return_place_c_set(
     set(dSv_player_return_place_c, stage, room, start_code)
 }
 
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct Color {
-    pub rgba: u32,
-}
-
-pub type TColor = *mut Color;
-
-pub fn j2d_draw_line(x1: f32, y1: f32, x2: f32, y2: f32, color: TColor, line_width: i32) {
-    let call = unsafe { transmute::<Addr, extern "C" fn(f32, f32, f32, f32, TColor, i32)>(0x802cb470) };
-    call(x1, y1, x2, y2, color, line_width)
-}
-
-pub fn j2d_fill_box(x: f32, y: f32, w: f32, h: f32, color: TColor) {
-    let call = unsafe { transmute::<Addr, extern "C" fn(f32, f32, f32, f32, TColor)>(0x802cb59c) };
-    call(x, y, w, h, color)
-}
-
-pub fn j2d_draw_frame(x: f32, y: f32, w: f32, h: f32, color: TColor, line_width: u8) {
-    let call = unsafe { transmute::<Addr, extern "C" fn(f32, f32, f32, f32, TColor, u8)>(0x802cb674) };
-    call(x, y, w, h, color, line_width)
-}
-
 pub struct JKRDvdFile;
 
 impl JKRDvdFile {

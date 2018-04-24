@@ -1,4 +1,5 @@
 use config::Config;
+use demangle::demangle as demangle_tww;
 use linker::{LinkedSection, SectionKind};
 use regex::Regex;
 use rustc_demangle::demangle as demangle_rust;
@@ -6,7 +7,6 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufWriter, prelude::*};
 use std::str;
-use demangle::demangle as demangle_tww;
 
 const FRAMEWORK_MAP: &str = include_str!("../resources/framework.map");
 const HEADER: &str = r".text section layout
@@ -58,7 +58,12 @@ pub fn parse(buf: &[u8]) -> HashMap<String, u32> {
             let name = captures.get(2).unwrap().as_str();
             if name != ".text" {
                 let address = u32::from_str_radix(captures.get(1).unwrap().as_str(), 16).unwrap();
-                symbols.insert(demangle_tww(name).map(|n| n.into_owned()).unwrap_or_else(|_| name.to_owned()), address);
+                symbols.insert(
+                    demangle_tww(name)
+                        .map(|n| n.into_owned())
+                        .unwrap_or_else(|_| name.to_owned()),
+                    address,
+                );
             }
         }
     }

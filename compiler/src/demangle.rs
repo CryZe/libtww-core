@@ -1,5 +1,5 @@
-use std::fmt::{self, Display};
 use std::borrow::Cow;
+use std::fmt::{self, Display};
 
 type IsConst = bool;
 
@@ -97,11 +97,12 @@ impl<'a> Display for Type<'a> {
     }
 }
 
-
 fn parse_count(text: &str) -> Result<(usize, &str), Cow<'static, str>> {
     let mut text = text;
 
-    let count = text.chars().take_while(|c| c.is_digit(10)).collect::<String>();
+    let count = text.chars()
+        .take_while(|c| c.is_digit(10))
+        .collect::<String>();
     text = &text[count.len()..];
     let count = try!(count.parse().map_err(|_| "Couldn't parse count"));
 
@@ -158,8 +159,11 @@ fn parse_type(text: &str) -> Result<(Option<Type>, &str), Cow<'static, str>> {
                 None
             };
 
-            Type::Function(false, Box::new(typ.unwrap_or_else(|| Type::Normal(false, "void"))),
-                           parameters)
+            Type::Function(
+                false,
+                Box::new(typ.unwrap_or_else(|| Type::Normal(false, "void"))),
+                parameters,
+            )
         }
         Some('A') => {
             let (count, remaining) = try!(parse_count(text));
@@ -170,8 +174,10 @@ fn parse_type(text: &str) -> Result<(Option<Type>, &str), Cow<'static, str>> {
             let (typ, remaining) = try!(parse_type(text));
             text = remaining;
 
-            Type::Array(count,
-                        Box::new(try!(typ.ok_or("Expected Type of Array Elements"))))
+            Type::Array(
+                count,
+                Box::new(try!(typ.ok_or("Expected Type of Array Elements"))),
+            )
         }
         Some('P') => {
             let (typ, remaining) = try!(parse_type(text));
@@ -183,7 +189,10 @@ fn parse_type(text: &str) -> Result<(Option<Type>, &str), Cow<'static, str>> {
             let (typ, remaining) = try!(parse_type(text));
             text = remaining;
 
-            Type::Reference(false, Box::new(try!(typ.ok_or("Expected Type of Reference"))))
+            Type::Reference(
+                false,
+                Box::new(try!(typ.ok_or("Expected Type of Reference"))),
+            )
         }
         Some('Q') => {
             let skip_index = text.char_indices().nth(1).unwrap().0;
@@ -243,7 +252,10 @@ fn parse_type(text: &str) -> Result<(Option<Type>, &str), Cow<'static, str>> {
 
 fn base_name(function: &str) -> (&str, Option<&str>) {
     if let Some(underscore_index) = function.rfind("__") {
-        (&function[..underscore_index], Some(&function[underscore_index + 2..]))
+        (
+            &function[..underscore_index],
+            Some(&function[underscore_index + 2..]),
+        )
     } else {
         (function, None)
     }
@@ -275,10 +287,10 @@ pub fn demangle(function: &str) -> Result<Cow<str>, Cow<'static, str>> {
 
             Ok(())
         } else {
-            Err(format!("Unexpected Type {} for signature {}, expected Function",
-                        typ,
-                        signature)
-                .into())
+            Err(format!(
+                "Unexpected Type {} for signature {}, expected Function",
+                typ, signature
+            ).into())
         }
     }
 

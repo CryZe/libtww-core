@@ -13,9 +13,9 @@ extern crate toml;
 mod assembler;
 mod banner;
 mod config;
+mod demangle;
 mod dol;
 mod framework_map;
-mod demangle;
 mod iso;
 mod linker;
 
@@ -29,97 +29,6 @@ use std::fs::File;
 use std::io::{BufWriter, prelude::*};
 use std::process::Command;
 
-<<<<<<< HEAD
-||||||| merged common ancestors
-const FRAMEWORK_MAP: &str = include_str!("../resources/framework.map");
-const HEADER: &str = r".text section layout
-  Starting        Virtual
-  address  Size   address
-  -----------------------";
-
-fn create_framework_map(config: &Config, sections: &[linker::LinkedSection]) {
-    let mut file =
-        BufWriter::new(File::create(&config.build.map).expect("Couldn't create the framework map"));
-
-    writeln!(file, "{}", HEADER).unwrap();
-
-    for section in sections {
-        let mut section_name_buf;
-        let section_name = section.section_name;
-        let section_name = if section_name.starts_with(".text.")
-            && section.kind == SectionKind::TextSection
-        {
-            section_name_buf = demangle(&section_name[".text.".len()..]).to_string();
-            section_name_buf = section_name_buf
-                .replace(' ', "_")
-                .replace("()", "Void")
-                .replace("(", "Tuple<")
-                .replace(")", ">");
-            let mut section_name: &str = &section_name_buf;
-            if section_name.len() >= 19 && &section_name[section_name.len() - 19..][..3] == "::h" {
-                section_name = &section_name[..section_name.len() - 19];
-            }
-            section_name
-        } else {
-            section_name
-        };
-
-        writeln!(
-            file,
-            "  00000000 {:06x} {:08x}  4 {} \t{}",
-            section.len - section.sym_offset,
-            section.address + section.sym_offset,
-            section_name,
-            section.member_name
-        ).unwrap();
-    }
-
-    write!(file, "{}", FRAMEWORK_MAP).unwrap();
-}
-
-=======
-const FRAMEWORK_MAP: &str = include_str!("../resources/framework.map");
-const HEADER: &str = r".text section layout
-  Starting        Virtual
-  address  Size   address
-  -----------------------";
-
-fn create_framework_map(config: &Config, sections: &[linker::LinkedSection]) {
-    let mut file =
-        BufWriter::new(File::create(&config.build.map).expect("Couldn't create the framework map"));
-
-    writeln!(file, "{}", HEADER).unwrap();
-
-    for section in sections {
-        let mut section_name_buf;
-        let section_name = section.section_name;
-        let section_name = if section_name.starts_with(".text.")
-            && section.kind == SectionKind::TextSection
-        {
-            section_name_buf = demangle(&section_name[".text.".len()..]).to_string();
-            let mut section_name: &str = &section_name_buf;
-            if section_name.len() >= 19 && &section_name[section_name.len() - 19..][..3] == "::h" {
-                section_name = &section_name[..section_name.len() - 19];
-            }
-            section_name
-        } else {
-            section_name
-        };
-
-        writeln!(
-            file,
-            "  00000000 {:06x} {:08x}  4 {} \t{}",
-            section.len - section.sym_offset,
-            section.address + section.sym_offset,
-            section_name,
-            section.member_name
-        ).unwrap();
-    }
-
-    write!(file, "{}", FRAMEWORK_MAP).unwrap();
-}
-
->>>>>>> WIP
 fn main() {
     let mut toml_buf = String::new();
     File::open("RomHack.toml")
