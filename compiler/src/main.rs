@@ -11,23 +11,23 @@ extern crate syn;
 extern crate toml;
 
 mod assembler;
-mod banner;
 mod config;
+mod demangle;
 mod dol;
 mod framework_map;
-mod demangle;
 mod iso;
 mod linker;
+mod texture;
 
 use assembler::Assembler;
 use assembler::Instruction;
-use banner::Banner;
 use config::Config;
 use dol::DolFile;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufWriter, prelude::*};
+use std::io::{prelude::*, BufWriter};
 use std::process::Command;
+use texture::Banner;
 
 fn main() {
     let mut toml_buf = String::new();

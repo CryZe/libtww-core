@@ -1,11 +1,10 @@
 //! Based on http://www.gc-forever.com/yagcd/chap14.html#sec14.1
+//! and http://wiki.tockdom.com/wiki/Image_Formats#RGB5A3
 
 use encoding_rs::{UTF_8, SHIFT_JIS};
 
-const COLUMNS: usize = 24;
-const ROWS: usize = 8;
-const PIXELS_PER_COLUMN: usize = 4;
-const PIXELS_PER_ROW: usize = 4;
+use super::image;
+
 const WIDTH: usize = 96;
 const HEIGHT: usize = 32;
 const UNCOMPRESSED_BYTES_PER_PIXEL: usize = 4;
@@ -34,35 +33,6 @@ pub struct Banner {
     pub game_description: String,
 }
 
-fn a1rgb5_to_rgba(v: &[u8]) -> [u8; 4] {
-    let (x, y) = (v[0], v[1]);
-    // ARRRRRGG GGGBBBBB
-    let a = x >> 7;
-    let r = (x >> 2) & 0b11111;
-    let g = ((x & 0b11) << 3) | (y >> 5);
-    let b = y & 0b11111;
-
-    let r = (r as f32 * (255.0 / 31.0)) as u8;
-    let g = (g as f32 * (255.0 / 31.0)) as u8;
-    let b = (b as f32 * (255.0 / 31.0)) as u8;
-    let a = a * 255;
-
-    [r, g, b, a]
-}
-
-fn rgba_to_a1rgb5(v: &[u8]) -> [u8; 2] {
-    let (r, g, b, a) = (v[0], v[1], v[2], v[3]);
-    let r = (r as f32 * (31.0 / 255.0)).round() as u8;
-    let g = (g as f32 * (31.0 / 255.0)).round() as u8;
-    let b = (b as f32 * (31.0 / 255.0)).round() as u8;
-    let a = (a >= 128) as u8;
-
-    let x = (a << 7) | (r << 2) | (g >> 3);
-    let y = (g << 5) | b;
-
-    [x, y]
-}
-
 fn read_string(is_japanese: bool, bytes: &[u8]) -> String {
     let end = bytes.iter().position(|&x| x == 0).unwrap_or(bytes.len());
     let bytes = &bytes[..end];
@@ -88,22 +58,7 @@ impl Banner {
 
         let image_data = &data[OFFSET_IMAGE..][..COMPRESSED_IMAGE_SIZE];
         let mut rgba_image = [0; UNCOMPRESSED_IMAGE_SIZE];
-        let mut image_data = image_data.chunks(COMPRESSED_BYTES_PER_PIXEL);
-        for row in 0..ROWS {
-            let row_y = row * PIXELS_PER_ROW;
-            for column in 0..COLUMNS {
-                let column_x = column * PIXELS_PER_COLUMN;
-                for y in 0..PIXELS_PER_ROW {
-                    let y = row_y + y;
-                    for x in 0..PIXELS_PER_COLUMN {
-                        let x = column_x + x;
-                        let pixel_index = UNCOMPRESSED_BYTES_PER_PIXEL * (y * WIDTH + x);
-                        let dst = &mut rgba_image[pixel_index..][..UNCOMPRESSED_BYTES_PER_PIXEL];
-                        dst.copy_from_slice(&a1rgb5_to_rgba(image_data.next().unwrap()));
-                    }
-                }
-            }
-        }
+        image::decode_rgb5a3(image_data, &mut rgba_image, (WIDTH, HEIGHT));
 
         let game_name = read_string(is_japanese, &data[OFFSET_GAME_NAME..][..SHORT_TEXT_LEN]);
         let developer_name = read_string(
@@ -137,28 +92,11 @@ impl Banner {
 
         data[..MAGIC_LEN].copy_from_slice(&self.magic);
 
-        {
-            let image_data = &mut data[OFFSET_IMAGE..][..COMPRESSED_IMAGE_SIZE];
-            let mut image_data = image_data.chunks_mut(COMPRESSED_BYTES_PER_PIXEL);
-            for row in 0..ROWS {
-                let row_y = row * PIXELS_PER_ROW;
-                for column in 0..COLUMNS {
-                    let column_x = column * PIXELS_PER_COLUMN;
-                    for y in 0..PIXELS_PER_ROW {
-                        let y = row_y + y;
-                        for x in 0..PIXELS_PER_COLUMN {
-                            let x = column_x + x;
-                            let pixel_index = UNCOMPRESSED_BYTES_PER_PIXEL * (y * WIDTH + x);
-                            let src = &self.image[pixel_index..];
-                            image_data
-                                .next()
-                                .unwrap()
-                                .copy_from_slice(&rgba_to_a1rgb5(src));
-                        }
-                    }
-                }
-            }
-        }
+        image::encode_rgb5a3(
+            &self.image,
+            &mut data[OFFSET_IMAGE..][..COMPRESSED_IMAGE_SIZE],
+            (WIDTH, HEIGHT),
+        );
 
         write_string(
             is_japanese,
