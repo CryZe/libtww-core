@@ -42,6 +42,19 @@ pub extern "C" fn realloc(ptr: *mut u8, size: usize) -> *mut u8 {
 }
 
 #[no_mangle]
+pub extern "C" fn posix_memalign(
+    memptr: *mut *mut u8,
+    alignment: usize,
+    size: usize,
+) -> i32 {
+    unsafe {
+        *memptr = game_memalign(alignment as isize, size);
+    }
+    0
+}
+
+
+#[no_mangle]
 pub extern "C" fn write(_file: i32, _buffer: *const u8, _count: usize) -> i32 {
     unimplemented!()
 }
