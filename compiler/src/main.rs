@@ -1,35 +1,40 @@
 extern crate byteorder;
+extern crate encoding_rs;
 extern crate goblin;
+extern crate image;
+extern crate regex;
 extern crate rustc_demangle;
 #[macro_use]
 extern crate serde_derive;
-extern crate encoding_rs;
-extern crate image;
-extern crate regex;
 extern crate serde;
+#[macro_use]
+extern crate structopt;
 extern crate syn;
 extern crate toml;
 
 mod assembler;
 mod banner;
 mod config;
+mod demangle;
 mod dol;
 mod framework_map;
-mod demangle;
 mod iso;
 mod linker;
+mod opt;
 
 use assembler::Assembler;
 use assembler::Instruction;
 use banner::Banner;
 use config::Config;
 use dol::DolFile;
+use opt::Opt;
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::{BufWriter, prelude::*};
+use std::fs::{File, OpenOptions};
+use std::io::{prelude::*, BufWriter};
 use std::process::Command;
+use structopt::StructOpt;
 
-fn main() {
+fn build() {
     let mut toml_buf = String::new();
     File::open("RomHack.toml")
         .expect("Couldn't find \"RomHack.toml\".")
@@ -40,28 +45,35 @@ fn main() {
     let base_address: syn::LitInt =
         syn::parse_str(&config.link.base).expect("Invalid Base Address");
 
-    println!("Compiling...");
+    eprintln!("Compiling...");
 
-    let exit_code = Command::new("cargo")
-        .args(&[
-            "build",
-            "--release",
-            "--target",
-            "powerpc-unknown-linux-gnu",
-        ])
-        .env(
-            "RUSTFLAGS",
-            "-C target-feature=+msync,+fres,+frsqrte -C opt-level=s",
-        )
-        .current_dir(&config.src.src)
-        .spawn()
-        .expect("Couldn't build the project")
-        .wait()
-        .unwrap();
+    {
+        let mut command = Command::new("cargo");
+        command
+            .args(&[
+                "build",
+                "--release",
+                "--target",
+                "powerpc-unknown-linux-gnu",
+            ])
+            .env(
+                "RUSTFLAGS",
+                "-C target-feature=+msync,+fres,+frsqrte -C opt-level=s",
+            );
+        if let Some(ref src_dir) = config.src.src {
+            command.current_dir(src_dir);
+        }
 
-    assert!(exit_code.success(), "Couldn't build the project");
+        let exit_code = command
+            .spawn()
+            .expect("Couldn't build the project")
+            .wait()
+            .unwrap();
 
-    println!("Loading original game...");
+        assert!(exit_code.success(), "Couldn't build the project");
+    }
+
+    eprintln!("Loading original game...");
 
     let buf = iso::reader::load_iso_buf(&config.src.iso)
         .unwrap_or_else(|_| panic!("Couldn't find \"{}\".", config.src.iso.display()));
@@ -71,11 +83,11 @@ fn main() {
 
     let mut original_symbols = HashMap::new();
     if let Some(framework_map) = iso.framework_map() {
-        println!("Parsing game's framework.map...");
+        eprintln!("Parsing game's framework.map...");
         original_symbols = framework_map::parse(&framework_map.data);
     }
 
-    println!("Linking...");
+    eprintln!("Linking...");
 
     let mut libs_to_link = Vec::with_capacity(config.src.link.len() + 1);
     for lib_path in &config.src.link {
@@ -100,13 +112,13 @@ fn main() {
         &original_symbols,
     );
 
-    println!("Creating map...");
+    eprintln!("Creating map...");
 
     framework_map::create(&config, &linked.sections);
 
     let mut instructions = Vec::new();
     if let Some(patch) = config.src.patch.take() {
-        println!("Parsing patch...");
+        eprintln!("Parsing patch...");
 
         let mut asm = String::new();
         File::open(&patch)
@@ -121,7 +133,7 @@ fn main() {
     }
 
     {
-        println!("Patching game...");
+        eprintln!("Patching game...");
 
         let main_dol = iso.main_dol_mut().expect("Dol file not found");
         let dol_data: Vec<u8> = main_dol.data.to_owned();
@@ -131,7 +143,7 @@ fn main() {
         main_dol.data = &new_dol_data;
     }
     {
-        println!("Patching banner...");
+        eprintln!("Patching banner...");
 
         if let Some(banner_file) = iso.banner_mut() {
             // TODO Not always true
@@ -161,16 +173,106 @@ fn main() {
             new_banner_data = banner.to_bytes(is_japanese);
             banner_file.data = &new_banner_data;
         } else {
-            println!("No banner to patch.");
+            eprintln!("No banner to patch.");
         }
     }
 
-    println!("Building ISO...");
+    eprintln!("Building ISO...");
     let iso_path = &config.build.iso;
     iso::writer::write_iso(
         BufWriter::with_capacity(4 << 20, File::create(iso_path).unwrap()),
         &iso,
     ).unwrap();
+}
+
+fn new(name: String) {
+    let exit_code = Command::new("cargo")
+        .args(&["new", "--lib", &name])
+        .spawn()
+        .expect("Couldn't create the cargo project")
+        .wait()
+        .unwrap();
+
+    assert!(exit_code.success(), "Couldn't create the cargo project");
+
+    let mut file = File::create(format!("{}/RomHack.toml", name)).unwrap();
+    write!(
+        file,
+        r#"[info]
+game-name = "{0}"
+
+[src]
+iso = "game.iso" # Provide the path of the game's ISO
+link = ["target/powerpc-unknown-linux-gnu/release/lib{0}.a"]
+patch = "src/patch.asm"
+
+[build]
+map = "target/framework.map"
+iso = "target/{0}.iso"
+
+[link]
+entries = ["init"] # Enter the exported function names here
+base = "0x8040_1000" # Enter the start address of the Rom Hack's code here
+"#,
+        name
+    ).unwrap();
+
+    let mut file = File::create(format!("{}/src/lib.rs", name)).unwrap();
+    write!(
+        file,
+        "{}",
+        r#"#![no_std]
+#![feature(lang_items)]
+pub mod lang_items;
+
+#[no_mangle]
+pub extern "C" fn init() {}
+"#
+    ).unwrap();
+
+    let mut file = File::create(format!("{}/src/lang_items.rs", name)).unwrap();
+    write!(
+        file,
+        "{}",
+        r#"#[lang = "panic_fmt"]
+#[no_mangle]
+pub extern "C" fn panic_fmt() -> ! {
+    loop {}
+}
+"#
+    ).unwrap();
+
+    let mut file = File::create(format!("{}/src/patch.asm", name)).unwrap();
+    write!(
+        file,
+        r#"; You can use this to patch the game's code to call into the Rom Hack's code
+"#
+    ).unwrap();
+
+    let mut file = OpenOptions::new()
+        .append(true)
+        .open(format!("{}/Cargo.toml", name))
+        .unwrap();
+    write!(
+        file,
+        r#"
+[lib]
+crate-type = ["staticlib"]
+
+[profile.release]
+panic = "abort"
+lto = true
+"#
+    ).unwrap();
+}
+
+fn main() {
+    let opt = Opt::from_args();
+
+    match opt {
+        Opt::Build {} => build(),
+        Opt::New { name } => new(name),
+    }
 }
 
 fn patch_game(

@@ -1,5 +1,5 @@
 [package]
-name = "compiler"
+name = "romhack"
 version = "0.1.0"
 authors = ["Christopher Serr <cryze92@gmail.com>"]
 
@@ -14,3 +14,4 @@ syn = { version = "0.13.1", default-features = false, features = ["parsing"] }
 encoding_rs = "0.7.2"
 image = "0.18.0"
 regex = "0.2.10"
+structopt = "0.2.7"

@@ -1,4 +1,4 @@
-#![feature(lang_items, const_fn)]
+#![feature(const_fn)]
 #![no_std]
 #![cfg_attr(
     feature = "alloc",
@@ -25,7 +25,7 @@ pub mod link;
 pub mod system;
 pub mod warping;
 
-pub type Addr = system::libc::size_t;
+pub type Addr = usize;
 pub use link::Link;
 
 use core::fmt;

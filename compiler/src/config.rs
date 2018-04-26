@@ -11,7 +11,7 @@ pub struct Config {
 
 #[derive(Deserialize)]
 pub struct Src {
-    pub src: PathBuf,
+    pub src: Option<PathBuf>,
     pub iso: PathBuf,
     pub link: Vec<PathBuf>,
     pub patch: Option<PathBuf>,
