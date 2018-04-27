@@ -82,9 +82,11 @@ fn build() {
     let mut iso = iso::reader::load_iso(&buf);
 
     let mut original_symbols = HashMap::new();
-    if let Some(framework_map) = iso.framework_map() {
-        eprintln!("Parsing game's framework.map...");
+    if let Some(framework_map) = config.src.map.as_ref().and_then(|m| iso.resolve_path(m)) {
+        eprintln!("Parsing game's map...");
         original_symbols = framework_map::parse(&framework_map.data);
+    } else {
+        eprintln!("No symbol map specified or it wasn't found.");
     }
 
     eprintln!("Linking...");

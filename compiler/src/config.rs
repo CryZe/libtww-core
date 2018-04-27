@@ -15,6 +15,7 @@ pub struct Src {
     pub iso: PathBuf,
     pub link: Vec<PathBuf>,
     pub patch: Option<PathBuf>,
+    pub map: Option<String>,
 }
 
 #[derive(Deserialize, Default)]

@@ -53,7 +53,7 @@ pub fn parse(buf: &[u8]) -> HashMap<String, u32> {
     let mut symbols = HashMap::new();
     let regex = Regex::new(r"\s{2}\w{8}\s\w{6}\s(\w{8}).{4}(.*)\s{2}").unwrap();
     let text = str::from_utf8(buf).unwrap();
-    for line in text.lines().skip(4).take_while(|l| !l.is_empty()) {
+    for line in text.lines().take_while(|l| !l.is_empty()) {
         if let Some(captures) = regex.captures(line) {
             let name = captures.get(2).unwrap().as_str();
             if name != ".text" {

@@ -75,17 +75,26 @@ impl<'a> Directory<'a> {
         Some(banner)
     }
 
-    pub fn framework_map(&self) -> Option<&File<'a>> {
-        let maps_dir = self.children
-            .iter()
-            .filter_map(|c| c.as_directory())
-            .find(|d| d.name == "maps")?;
-        let file = maps_dir
-            .children
-            .iter()
-            .filter_map(|c| c.as_file())
-            .find(|f| f.name == "framework.map")?;
-        Some(file)
+    pub fn resolve_path(&self, path: &str) -> Option<&File<'a>> {
+        let mut dir = self;
+        let mut segments = path.split('/').peekable();
+
+        while let Some(segment) = segments.next() {
+            if segments.peek().is_some() {
+                // Must be a folder
+                dir = dir.children
+                    .iter()
+                    .filter_map(|c| c.as_directory())
+                    .find(|d| d.name == segment)?;
+            } else {
+                return dir
+                    .children
+                    .iter()
+                    .filter_map(|c| c.as_file())
+                    .find(|f| f.name == segment);
+            }
+        }
+        None
     }
 }
 
