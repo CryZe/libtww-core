@@ -5,6 +5,7 @@ authors = ["Christopher Serr <christopher.serr@gmail.com>"]
 
 [dependencies]
 arrayvec = { version = "0.4.7", default-features = false }
+gcn = { git = "https://github.com/CryZe/gcn", rev = "00cacaad3e3eb2ed2bd54a4a1ab6c3a469a8b96f" }
 
 [features]
 alloc = []

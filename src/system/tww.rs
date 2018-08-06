@@ -1,8 +1,8 @@
 #![allow(non_snake_case)]
 
-use Addr;
 use core::mem::transmute;
 use system::memory::{read, write};
+use Addr;
 
 extern "C" {
     #[link_name = "JAIZelBasic::getRandomU32(u32)"]
@@ -11,6 +11,10 @@ extern "C" {
     #[link_name = "cM_rndF(f32)"]
     // TODO Wrong Signature, takes f32
     fn game_random() -> f64;
+    #[link_name = "cDyl_InitAsync()"]
+    fn game_cdyl_init_async();
+    #[link_name = "dMeter_rupyInit(sub_meter_class*)"]
+    fn game_dmeter_rupy_init(addr: Addr);
 }
 
 pub fn random_u32() -> u32 {
@@ -22,13 +26,11 @@ pub fn random() -> f64 {
 }
 
 pub fn cdyl_init_async() {
-    let cdyl_init_async = unsafe { transmute::<Addr, extern "C" fn()>(0x80022A88) };
-    cdyl_init_async();
+    unsafe { game_cdyl_init_async() }
 }
 
 pub fn dmeter_rupy_init(addr: Addr) {
-    let dmeter_rupy_init = unsafe { transmute::<Addr, extern "C" fn(Addr)>(0x801F7868) };
-    dmeter_rupy_init(addr);
+    unsafe { game_dmeter_rupy_init(addr) }
 }
 
 pub fn get_frame_count() -> u32 {
@@ -145,137 +147,6 @@ impl JKRDvdFile {
     pub fn get_file_size(this: *mut u8) -> i32 {
         let get_file_size = unsafe { transmute::<Addr, extern "C" fn(*mut u8) -> i32>(0x802ba328) };
         get_file_size(this)
-    }
-}
-
-pub struct OS;
-
-impl OS {
-    // pub fn allocate_thread() -> Box<[u8]> {
-    //     vec![0xCE; 792 + 32].into_boxed_slice()
-    // }
-
-    // pub fn allocate_mutex() -> Box<[u8]> {
-    //     vec![0xCE; 64 + 32].into_boxed_slice()
-    // }
-
-    // pub fn allocate_cond() -> Box<[u8]> {
-    //     vec![0xCE; 32].into_boxed_slice()
-    // }
-
-    pub fn get_current_thread() -> *const u8 {
-        let get_current_thread =
-            unsafe { transmute::<Addr, extern "C" fn() -> *const u8>(0x8030577c) };
-        get_current_thread()
-    }
-
-    pub fn is_thread_terminated(this: *const u8) -> bool {
-        let is_thread_terminated =
-            unsafe { transmute::<Addr, extern "C" fn(*const u8) -> bool>(0x80305788) };
-        is_thread_terminated(this)
-    }
-
-    pub fn create_thread(
-        this: *mut u8,
-        entry: extern "C" fn(*mut u8) -> *mut u8,
-        arg: *mut u8,
-        stack: *mut u8,
-        stack_size: usize,
-        priority: i32,
-        attr: i16,
-    ) -> bool {
-        let create_thread = unsafe {
-            transmute::<
-                Addr,
-                extern "C" fn(
-                    *mut u8,
-                    extern "C" fn(*mut u8) -> *mut u8,
-                    *mut u8,
-                    *mut u8,
-                    usize,
-                    i32,
-                    i16,
-                ) -> bool,
-            >(0x80305d84)
-        };
-        create_thread(this, entry, arg, stack, stack_size, priority, attr)
-    }
-
-    pub fn resume_thread(this: *const u8) -> i32 {
-        let resume_thread =
-            unsafe { transmute::<Addr, extern "C" fn(*const u8) -> i32>(0x803063ec) };
-        resume_thread(this)
-    }
-
-    pub fn suspend_thread(this: *const u8) -> i32 {
-        let suspend_thread =
-            unsafe { transmute::<Addr, extern "C" fn(*const u8) -> i32>(0x80306674) };
-        suspend_thread(this)
-    }
-
-    pub fn join_thread(this: *const u8, ret_value: *mut *mut u8) -> bool {
-        let join_thread = unsafe {
-            transmute::<Addr, extern "C" fn(*const u8, *mut *mut u8) -> bool>(0x8030620c)
-        };
-        join_thread(this, ret_value)
-    }
-
-    pub fn yield_thread() {
-        let yield_thread = unsafe { transmute::<Addr, extern "C" fn()>(0x80305d48) };
-        yield_thread()
-    }
-
-    pub fn init_mutex(this: *mut u8) {
-        let init_mutex = unsafe { transmute::<Addr, extern "C" fn(*mut u8)>(0x80303bb0) };
-        init_mutex(this)
-    }
-
-    pub fn lock_mutex(this: *const u8) {
-        let lock_mutex = unsafe { transmute::<Addr, extern "C" fn(*const u8)>(0x80303be8) };
-        lock_mutex(this)
-    }
-
-    pub fn unlock_mutex(this: *const u8) {
-        let unlock_mutex = unsafe { transmute::<Addr, extern "C" fn(*const u8)>(0x80303cc4) };
-        unlock_mutex(this)
-    }
-
-    pub fn try_lock_mutex(this: *const u8) -> bool {
-        let try_lock_mutex =
-            unsafe { transmute::<Addr, extern "C" fn(*const u8) -> bool>(0x80303dfc) };
-        try_lock_mutex(this)
-    }
-
-    pub fn init_cond(this: *mut u8) {
-        let init_cond = unsafe { transmute::<Addr, extern "C" fn(*mut u8)>(0x80303eb8) };
-        init_cond(this)
-    }
-
-    pub fn wait_cond(this: *const u8, mutex: *const u8) {
-        let wait_cond =
-            unsafe { transmute::<Addr, extern "C" fn(*const u8, *const u8)>(0x80303ed8) };
-        wait_cond(this, mutex)
-    }
-
-    pub fn signal_cond(this: *const u8) {
-        let signal_cond = unsafe { transmute::<Addr, extern "C" fn(*const u8)>(0x80303fac) };
-        signal_cond(this)
-    }
-
-    pub fn get_time() -> i64 {
-        let get_time = unsafe { transmute::<Addr, extern "C" fn() -> i64>(0x80307334) };
-        get_time()
-    }
-
-    pub fn report(text: *const u8) {
-        let report = unsafe { transmute::<Addr, extern "C" fn(*const u8)>(0x800068ec) };
-        report(text)
-    }
-
-    pub fn panic(file: *const u8, line: i32, message: *const u8) {
-        let panic =
-            unsafe { transmute::<Addr, extern "C" fn(*const u8, i32, *const u8)>(0x80006be8) };
-        panic(file, line, message)
     }
 }
 
