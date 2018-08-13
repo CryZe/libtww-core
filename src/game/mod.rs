@@ -1,6 +1,6 @@
 pub mod actor;
 pub mod console;
-pub mod controller;
+pub mod gamepad;
 pub mod event;
 pub mod flag;
 pub mod layer;

@@ -34,7 +34,16 @@ pub fn dmeter_rupy_init(addr: Addr) {
 }
 
 pub fn get_frame_count() -> u32 {
-    read(0x80396218)
+    #[repr(C)]
+    struct ZelAudio {
+        _padding: [u8; 0x10],
+        frame_count: u32,
+    }
+    extern "C" {
+        #[link_name = "g_mDoAud_zelAudio"]
+        static mut ZEL_AUDIO: ZelAudio;
+    }
+    unsafe { ZEL_AUDIO.frame_count }
 }
 
 pub fn is_pause_menu_up() -> bool {

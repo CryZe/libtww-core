@@ -1,4 +1,14 @@
-use system::memory::{read, write};
+#[repr(C)]
+struct JUTGamePad {
+    _unknown: [u8; 4],
+    buttons_down: u16,
+    buttons_pressed: u16,
+}
+
+extern "C" {
+    #[link_name = "JUTGamePad::mPadButton"]
+    static mut GAMEPAD: JUTGamePad;
+}
 
 pub const DPAD_LEFT: u16 = 0x0001;
 pub const DPAD_RIGHT: u16 = 0x0002;
@@ -14,19 +24,27 @@ pub const Y: u16 = 0x0800;
 pub const START: u16 = 0x1000;
 
 pub fn buttons_down() -> u16 {
-    read(0x803E0D2A)
+    unsafe {
+        GAMEPAD.buttons_down
+    }
 }
 
 pub fn buttons_pressed() -> u16 {
-    read(0x803E0D2E)
+    unsafe {
+        GAMEPAD.buttons_pressed
+    }
 }
 
 pub fn set_buttons_down(buttons: u16) {
-    write(0x803E0D2A, buttons)
+    unsafe {
+        GAMEPAD.buttons_down = buttons;
+    }
 }
 
 pub fn set_buttons_pressed(buttons: u16) {
-    write(0x803E0D2E, buttons)
+    unsafe {
+        GAMEPAD.buttons_pressed = buttons;
+    }
 }
 
 pub fn is_down(buttons: u16) -> bool {
