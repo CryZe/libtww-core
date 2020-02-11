@@ -6,8 +6,7 @@ edition = "2018"
 
 [dependencies]
 arrayvec = { version = "0.4.7", default-features = false }
-gcn = { git = "https://github.com/CryZe/gcn", rev = "20204290fb1073bce9ec4b7b1473ece3d08a337d" }
+gcn = { git = "https://github.com/CryZe/gcn" }
 
 [features]
-alloc = []
 math = []

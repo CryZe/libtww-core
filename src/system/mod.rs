@@ -1,3 +1,4 @@
+pub mod allocator;
 pub mod game_info;
 pub mod j2d;
 pub mod j3d;

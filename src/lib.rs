@@ -1,22 +1,9 @@
 #![no_std]
-#![cfg_attr(
-    feature = "alloc",
-    feature(
-        alloc, global_allocator, alloc_system, allocator_api, allocator_internals, macro_reexport
-    )
-)]
 #![cfg_attr(feature = "math", feature(core_float))]
-#![cfg_attr(feature = "alloc", default_lib_allocator)]
 
-#[cfg(feature = "alloc")]
-#[macro_reexport(vec, format)]
 pub extern crate alloc;
-#[cfg(feature = "alloc")]
-extern crate alloc_system;
-
-#[cfg(feature = "alloc")]
-#[global_allocator]
-static A: alloc_system::System = alloc_system::System;
+pub use alloc::{format, vec};
+pub use system::allocator::WindWakerAlloc as Alloc;
 
 extern crate arrayvec;
 extern crate gcn;
@@ -69,6 +56,5 @@ impl fmt::Display for Coord {
 }
 
 pub mod prelude {
-    #[cfg(feature = "alloc")]
     pub use alloc::{boxed::Box, vec::Vec};
 }
