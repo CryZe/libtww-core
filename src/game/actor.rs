@@ -1,7 +1,7 @@
-use game::layer;
-use link::Link;
-use system::memory;
-use {system, Coord};
+use crate::game::layer;
+use crate::link::Link;
+use crate::system::memory;
+use crate::{system, Coord};
 
 pub const DEFAULT_ENEMY_ID: i16 = -1;
 pub const DEFAULT_FLAG: u16 = 0;

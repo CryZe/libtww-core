@@ -6,6 +6,6 @@ pub mod libc;
 pub mod math;
 pub mod memory;
 pub mod tww;
-pub use gcn::{gx, os, report_panic};
+pub use gcn::{gx, os};
 
 pub use self::tww::*;

@@ -1,5 +1,5 @@
+use crate::system::{libc, memory};
 use core::fmt::{Error, Write};
-use system::{libc, memory};
 
 #[repr(C)]
 #[derive(Copy, Clone)]

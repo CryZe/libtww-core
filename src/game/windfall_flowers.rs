@@ -1,5 +1,5 @@
-use link::inventory::Inventory;
-use system::memory::reference;
+use crate::link::inventory::Inventory;
+use crate::system::memory::reference;
 
 #[repr(C, packed)]
 pub struct WindfallFlowers {

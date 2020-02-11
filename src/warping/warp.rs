@@ -1,6 +1,6 @@
-use system::memory::{reference, write, write_str};
-use warping::Entrance;
-use warping::FadeOut;
+use crate::system::memory::{reference, write, write_str};
+use crate::warping::Entrance;
+use crate::warping::FadeOut;
 
 pub const NO_LAYER_OVERRIDE: i8 = -1;
 

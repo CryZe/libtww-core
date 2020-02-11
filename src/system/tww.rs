@@ -1,8 +1,8 @@
 #![allow(non_snake_case)]
 
+use crate::system::memory::{read, write};
+use crate::Addr;
 use core::mem::transmute;
-use system::memory::{read, write};
-use Addr;
 
 extern "C" {
     #[link_name = "JAIZelBasic::getRandomU32(u32)"]
@@ -73,7 +73,7 @@ pub fn get_root_layer() -> Addr {
     read(0x80365B7C)
 }
 
-use game::actor::{ActorMemory, ActorTemplate};
+use crate::game::actor::{ActorMemory, ActorTemplate};
 
 pub fn dstage_actor_create(template: *const ActorTemplate, memory: *mut ActorMemory) {
     let dstage_actor_create = unsafe {

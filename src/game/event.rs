@@ -1,4 +1,4 @@
-use system::memory;
+use crate::system::memory;
 
 pub fn event_cancel() -> bool {
     memory::read(0x803BD3A3)

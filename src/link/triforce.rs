@@ -1,4 +1,4 @@
-use game::flag::Flag;
+use crate::game::flag::Flag;
 
 #[derive(Copy, Clone)]
 pub struct TriforcePiece(pub u8);

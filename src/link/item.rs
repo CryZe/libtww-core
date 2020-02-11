@@ -115,9 +115,9 @@ items! {
     EMPTY: 0xFF
 }
 
+use crate::game::layer;
+use crate::{Addr, Coord};
 use core::mem::transmute;
-use game::layer;
-use {Addr, Coord};
 
 pub fn spawn(coord: &Coord, item: u8) {
     layer::switch_to_safe_layer();

@@ -1,7 +1,7 @@
 use self::quest_items::{QuestItems, Shield, Sword};
+use crate::system::memory::{ptr, read, read_str, reference, write};
+use crate::{Addr, Coord};
 use core::fmt::{self, Display};
-use system::memory::{ptr, read, read_str, reference, write};
-use {Addr, Coord};
 
 pub mod equips;
 pub mod inventory;

@@ -1,4 +1,4 @@
-use system::memory::{read_str, reference};
+use crate::system::memory::{read_str, reference};
 
 #[repr(C, packed)]
 pub struct Entrance {

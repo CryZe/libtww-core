@@ -1,5 +1,5 @@
-use system::memory::{read, reference};
-use warping::Entrance;
+use crate::system::memory::{read, reference};
+use crate::warping::Entrance;
 
 pub fn is_new_game_plus() -> bool {
     read(0x803B82A8)

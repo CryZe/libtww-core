@@ -1,4 +1,4 @@
-use system::memory::reference;
+use crate::system::memory::reference;
 
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Eq)]

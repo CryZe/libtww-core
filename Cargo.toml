@@ -2,10 +2,11 @@
 name = "libtww"
 version = "0.1.0"
 authors = ["Christopher Serr <christopher.serr@gmail.com>"]
+edition = "2018"
 
 [dependencies]
 arrayvec = { version = "0.4.7", default-features = false }
-gcn = { git = "https://github.com/CryZe/gcn", rev = "00cacaad3e3eb2ed2bd54a4a1ab6c3a469a8b96f" }
+gcn = { git = "https://github.com/CryZe/gcn", rev = "20204290fb1073bce9ec4b7b1473ece3d08a337d" }
 
 [features]
 alloc = []

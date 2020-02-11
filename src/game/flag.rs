@@ -1,5 +1,5 @@
-use Addr;
-use system::memory::{ptr, read};
+use crate::system::memory::{ptr, read};
+use crate::Addr;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Flag(pub Addr, pub u8);
