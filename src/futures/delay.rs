@@ -19,7 +19,7 @@ impl Future for DelayUntil {
     }
 }
 
-pub fn delay_until(frame: u32) -> DelayUntil {
+pub const fn delay_until(frame: u32) -> DelayUntil {
     DelayUntil(frame)
 }
 

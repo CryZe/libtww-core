@@ -8,6 +8,8 @@ edition = "2018"
 arrayvec = { version = "0.4.7", default-features = false }
 gcn = { git = "https://github.com/CryZe/gcn" }
 libm = { version = "0.2.1", optional = true }
+bitflags = "1.2.1"
+futures-util = { version = "0.3.4", default-features = false }
 
 [features]
 math = ["libm"]
