@@ -773,9 +773,8 @@ impl ActorMemory {
 
     fn write_actor(&mut self, actor: &ActorTemplate) {
         self.params = actor.params;
-        self.coord = actor.coord.clone();
-        self.rotation[0] = actor.rotation[0];
-        self.rotation[1] = actor.rotation[1];
+        self.coord = unsafe { actor.coord.clone() };
+        self.rotation = actor.rotation;
         self.flag = actor.flag;
         self.enemy_id = actor.enemy_id;
     }

@@ -10,3 +10,4 @@ gcn = { git = "https://github.com/CryZe/gcn" }
 
 [features]
 math = []
+alloc = []

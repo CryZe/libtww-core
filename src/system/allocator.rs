@@ -46,10 +46,15 @@ unsafe fn realloc(ptr: *mut u8, size: usize, old_size: usize, align: usize) -> *
 
 pub struct WindWakerAlloc;
 
+#[cfg(feature = "alloc")]
 unsafe impl GlobalAlloc for WindWakerAlloc {
     #[inline]
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        alloc(ArchiveHeapCheck.heap, layout.size(), layout.align() as isize)
+        alloc(
+            ArchiveHeapCheck.heap,
+            layout.size(),
+            layout.align() as isize,
+        )
     }
 
     #[inline]
