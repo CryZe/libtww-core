@@ -30,18 +30,28 @@ unsafe fn calloc(size: usize, align: usize) -> *mut u8 {
 }
 
 unsafe fn realloc(ptr: *mut u8, size: usize, old_size: usize, align: usize) -> *mut u8 {
-    let new_data = alloc(ArchiveHeapCheck.heap, size, align as isize);
+    // Only actually reallocate if we are shrinking by a significant amount of
+    // bytes or need to grow the buffer. This is only safe because deallocating
+    // doesn't actually care about the size so we can keep around a buffer that
+    // is larger than what was requested. Theoretically we don't ever need to
+    // care about shrinking, but we don't have a lot of memory available in Wind
+    // Waker, so at some point we should care.
+    if size > old_size || old_size - size >= 32 {
+        let new_data = alloc(ArchiveHeapCheck.heap, size, align as isize);
 
-    if ptr != null_mut() {
-        let dst = new_data as *mut u8;
-        let src = ptr as *mut u8;
+        if ptr != null_mut() {
+            let dst = new_data as *mut u8;
+            let src = ptr as *mut u8;
 
-        ptr::copy_nonoverlapping(src, dst, size.min(old_size));
+            ptr::copy_nonoverlapping(src, dst, size.min(old_size));
 
-        free(ArchiveHeapCheck.heap, ptr);
+            free(ArchiveHeapCheck.heap, ptr);
+        }
+
+        new_data
+    } else {
+        ptr
     }
-
-    new_data
 }
 
 pub struct WindWakerAlloc;
