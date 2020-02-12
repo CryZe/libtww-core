@@ -1,5 +1,4 @@
 #![no_std]
-#![cfg_attr(feature = "math", feature(core_float))]
 
 #[cfg(feature = "alloc")]
 pub extern crate alloc;

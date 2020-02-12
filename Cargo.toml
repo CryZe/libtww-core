@@ -7,7 +7,8 @@ edition = "2018"
 [dependencies]
 arrayvec = { version = "0.4.7", default-features = false }
 gcn = { git = "https://github.com/CryZe/gcn" }
+libm = { version = "0.2.1", optional = true }
 
 [features]
-math = []
+math = ["libm"]
 alloc = []
