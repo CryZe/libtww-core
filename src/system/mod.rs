@@ -19,7 +19,7 @@ pub fn custom_game_loop(mut per_frame: impl FnMut()) -> ! {
         #[link_name = "mDoMch_HeapCheckAll()"]
         fn heap_check_all();
         #[link_name = "mDoMemCd_Ctrl_c::update()"]
-        fn memcd_ctrl_c_update(this: *mut u8);
+        fn memory_card_update(this: *const u8);
         #[link_name = "mDoCPd_Read()"]
         fn controller_read();
         #[link_name = "mDoAud_Execute()"]
@@ -29,40 +29,35 @@ pub fn custom_game_loop(mut per_frame: impl FnMut()) -> ! {
         #[link_name = "debug()"]
         fn debugger_run();
 
-        #[link_name = "MemCardWorkArea0"]
-        static mut MEM_CARD_WORK_AREA_BYTES: [u8; 0xa000];
-        #[link_name = "MemCardWorkArea0"]
-        static mut MEM_CARD_WORK_AREA_WORDS: [u32; 0xa000 / 4];
+        #[link_name = "mDoDvdThd::SyncWidthSound"]
+        static mut dvd_thread_sync_width_sound: u8;
+        #[link_name = "frame$4235"]
+        static mut frame_count: u32;
+        #[link_name = "fillcheck_check_frame"]
+        static mut fillcheck_check_frame: u8;
+        #[link_name = "g_mDoMemCd_control"]
+        static memory_card_controller: u8;
     }
 
     // We don't want to inline the per frame code, as the per frame code itself
     // requires some stack space and we want to allocate that extremely
     // temporarily in order to make sure that the game's code is not negatively
     // impacted.
-    let mut per_frame = core::convert::identity(
+    let mut per_frame = {
         #[inline(never)]
-        || per_frame(),
-    );
+        || per_frame()
+    };
 
     unsafe {
-        const SOME_WORD_OFFSET: usize = 10100 / 4;
-        const SOME_BYTE_OFFSET: usize = 10048;
-        const SOME_OTHER_BYTE_OFFSET: usize = 10384;
-
         loop {
-            MEM_CARD_WORK_AREA_WORDS[SOME_WORD_OFFSET] += 1;
+            frame_count += 1;
 
-            if let Some(0) = MEM_CARD_WORK_AREA_WORDS[SOME_WORD_OFFSET]
-                .checked_rem(MEM_CARD_WORK_AREA_BYTES[SOME_BYTE_OFFSET] as _)
-            {
+            if let Some(0) = frame_count.checked_rem(fillcheck_check_frame as _) {
                 heap_check_all();
             }
 
-            if MEM_CARD_WORK_AREA_BYTES[SOME_OTHER_BYTE_OFFSET] != 0 {
-                // FIXME: The linker doesn't have this address available as a
-                // symbol. This is the beginning of the .data section. We should
-                // make it available to allow this code to be portable.
-                memcd_ctrl_c_update(0x80364A20 as *mut u8);
+            if dvd_thread_sync_width_sound != 0 {
+                memory_card_update(&memory_card_controller);
             }
 
             controller_read();
