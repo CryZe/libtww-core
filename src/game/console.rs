@@ -1,6 +1,11 @@
 use crate::system::{libc, memory};
 use core::fmt::{Error, Write};
 
+extern "C" {
+    #[link_name = "JFWSystem::systemConsole"]
+    static mut SYSTEM_CONSOLE: *mut Console;
+}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Color {
@@ -18,6 +23,7 @@ pub struct Line {
 
 #[repr(C)]
 pub struct Console {
+    pub unknown: [u8; 0x40],
     pub x: u32,          // a60
     pub y: u32,          // a64
     pub line_count: u32, // a68
@@ -44,8 +50,7 @@ impl Color {
 
 impl Console {
     pub fn get() -> &'static mut Console {
-        // ArenaLow + 0x915C0
-        memory::reference(0x804E1A60)
+        unsafe { &mut *SYSTEM_CONSOLE }
     }
 
     pub fn setup(&mut self) {

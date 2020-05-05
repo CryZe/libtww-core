@@ -31,12 +31,21 @@ pub fn custom_game_loop(mut per_frame: impl FnMut()) -> ! {
 
         #[link_name = "mDoDvdThd::SyncWidthSound"]
         static mut dvd_thread_sync_width_sound: u8;
-        #[link_name = "frame$4235"]
-        static mut frame_count: u32;
         #[link_name = "fillcheck_check_frame"]
         static mut fillcheck_check_frame: u8;
         #[link_name = "g_mDoMemCd_control"]
         static memory_card_controller: u8;
+    }
+
+    #[cfg(feature = "ntsc_u")]
+    extern "C" {
+        #[link_name = "frame$4236"]
+        static mut frame_count: u32;
+    }
+    #[cfg(not(feature = "ntsc_u"))]
+    extern "C" {
+        #[link_name = "frame$4235"]
+        static mut frame_count: u32;
     }
 
     // We don't want to inline the per frame code, as the per frame code itself
